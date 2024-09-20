@@ -7,7 +7,9 @@ import java.util.concurrent.Callable
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-import net.katsstuff.bukkit.katlib.command.PageCmd
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
+import net.katsstuff.bukkit.katlib.command.CommandRegistrationType.Brigadier
+import net.katsstuff.bukkit.katlib.command.{CommandRegistrationType, PageCmd}
 import net.katsstuff.bukkit.katlib.service.{PaginationService, SimplePagination}
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.plugin.ServicePriority
@@ -22,8 +24,8 @@ class ScalaPlugin extends JavaPlugin { plugin =>
 
   val doWhenDisabling: mutable.Queue[() => Unit] = new mutable.Queue[() => Unit]
 
-  val useCommandmap: Boolean                  = false
-  val commandMapDefaultFallbackPrefix: String = getName.toLowerCase(Locale.ROOT)
+  val commandRegistrationType: CommandRegistrationType = CommandRegistrationType.Brigadier
+  val commandMapDefaultFallbackPrefix: String          = getName.toLowerCase(Locale.ROOT)
 
   given ScalaPlugin = this
 
@@ -39,15 +41,26 @@ class ScalaPlugin extends JavaPlugin { plugin =>
 
     override def reportFailure(cause: Throwable): Unit =
       logger.error(cause.getMessage, cause)
-
-  protected def runKatLibSetup(): Unit =
+      
+  protected def runKatLibRepeatableSetup(): Unit =
     Bukkit.getServicesManager.register(classOf[PaginationService], paginationServiceImpl, this, ServicePriority.Normal)
-    if useCommandmap then pageCmd.command.registerCommandMap(this, commandMapDefaultFallbackPrefix)
-    else pageCmd.command.register(this)
-
     addDisableAction {
       Bukkit.getServicesManager.unregister(classOf[PaginationService], paginationServiceImpl)
     }
+
+  // noinspection UnstableApiUsage
+  protected def runKatLibSetup(): Unit =
+    runKatLibRepeatableSetup()
+
+    commandRegistrationType match
+      case CommandRegistrationType.Bukkit =>
+        pageCmd.command.register(this)
+      case CommandRegistrationType.CommandMap =>
+        pageCmd.command.registerCommandMap(this, commandMapDefaultFallbackPrefix)
+      case CommandRegistrationType.Brigadier =>
+        getLifecycleManager.registerEventHandler(
+          LifecycleEvents.COMMANDS.newHandler(event => pageCmd.command.registerBrigadier(event.registrar, this))
+        )
 
   def runDisableActions(): Unit =
     while doWhenDisabling.nonEmpty do

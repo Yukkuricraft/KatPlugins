@@ -84,6 +84,7 @@ lazy val magicalWarps = project
     libraryDependencies += paperDep("net.katsstuff" %% "dataprism-skunk" % "0.1.0"),
     libraryDependencies += paperDep("net.katsstuff" %% "perspective-derivation" % "0.3.0"),
     libraryDependencies += paperDep("org.tpolecat" %% "skunk-circe" % "0.6.3"),
+    libraryDependencies ++= katLibPaperDeps.map(paperDep),
     buildInfoPackage := "net.katsstuff.bukkit.magicalwarps"
   )
 
@@ -97,7 +98,8 @@ lazy val rider = project
       "Katlib.jar" -> (katLib / Compile / packageBin).value
     ),
     libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT" % Provided,
-    buildInfoPackage                         := "net.katsstuff.bukkit.rider"
+    libraryDependencies ++= katLibPaperDeps.map(paperDep),
+    buildInfoPackage := "net.katsstuff.bukkit.rider"
   )
 
 lazy val feelingsRelay = project
@@ -114,5 +116,6 @@ lazy val feelingsRelay = project
     libraryDependencies += paperDep("io.circe" %% "circe-parser" % "0.14.5"),
     libraryDependencies += paperDep("io.circe" %% "circe-yaml" % "0.15.0-RC1" exclude ("org.yaml", "snakeyaml")),
     libraryDependencies += paperDep("net.katsstuff" %% "perspective-derivation" % "0.3.0"),
+    libraryDependencies ++= katLibPaperDeps.map(paperDep),
     buildInfoPackage := "net.katsstuff.bukkit.feelingsrelay"
   )

@@ -39,6 +39,12 @@ storage:
     # Database to use
     database: ''
 
+    # Max amount of connections to the DB at once
+    maxConnections: 100
+
+    # Extra parameters for Postgres
+    parameters: {}
+
 # How multiple servers should communicate with each other to make MagicalWarps work 
 # seamlessly across servers.
 #

@@ -1,11 +1,9 @@
 package net.katsstuff.bukkit.homesweethome
 
 import java.nio.file.{Files, Path}
-
 import scala.compiletime.uninitialized
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
-
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
@@ -13,25 +11,20 @@ import cats.effect.unsafe.IORuntime
 import dataprism.skunk.sql.{SkunkSessionDb, SkunkSessionPoolDb}
 import dataprism.sql.Db
 import fs2.io.net.Network
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import natchez.Trace
 import natchez.Trace.Implicits.noop
 import net.katsstuff.bukkit.homesweethome.HSHConfig.{CrossServerCommunication, StorageType}
 import net.katsstuff.bukkit.homesweethome.cmd.*
 import net.katsstuff.bukkit.homesweethome.home.homehandler.{HomeHandler, PostgresHomeHandler, SingleServerHomeHandler}
-import net.katsstuff.bukkit.homesweethome.home.storage.{
-  HomeStorage,
-  MultiFileHomeStorage,
-  PostgresHomeStorage,
-  SingleFileHomeStorage
-}
+import net.katsstuff.bukkit.homesweethome.home.storage.{HomeStorage, MultiFileHomeStorage, PostgresHomeStorage, SingleFileHomeStorage}
 import net.katsstuff.bukkit.katlib.ScalaPlugin
-import net.katsstuff.bukkit.katlib.command.HelpCmd
+import net.katsstuff.bukkit.katlib.command.{CommandRegistrationType, HelpCmd}
 import org.bukkit.Bukkit
 import skunk.Session
 
 class HomePlugin extends ScalaPlugin:
 
-  override val useCommandmap: Boolean                  = true
   override val commandMapDefaultFallbackPrefix: String = "homesweethome"
 
   given plugin: HomePlugin = this
@@ -130,9 +123,13 @@ class HomePlugin extends ScalaPlugin:
 
         Bukkit.getPluginManager.registerEvents(storage, this)
         storage
-
-  override def onEnable(): Unit =
-    runKatLibSetup()
+        
+  //noinspection UnstableApiUsage
+  def setup(ignoreOneTime: Boolean): Unit =
+    if ignoreOneTime then
+      runKatLibRepeatableSetup()
+    else 
+      runKatLibSetup()
 
     hshConfig = loadConfig().get
 
@@ -180,20 +177,29 @@ class HomePlugin extends ScalaPlugin:
         Teleporter.sameServerTeleporter
     }
     given Teleporter = teleporterVal
-
-    val homeHelp = new HelpCmd(this)
-    val homeCmd = HomeCommands.homeCommand(
-      helpExecution = homeHelp.helpExecution,
-      reloadData = () => {
-        onDisable(); onEnable()
-      }
-    )
-    val homesCmd = HomeCommands.homesCommand
-
-    homeHelp.registerCommand(homeCmd)
-    homeHelp.registerCommand(homesCmd)
-
-    homeCmd.registerCommandMap(this, "homesweethome")
-    homesCmd.registerCommandMap(this, "homesweethome")
+    
+    if !ignoreOneTime then
+      val homeHelp = new HelpCmd(this)
+      val homeCmd = HomeCommands.homeCommand(
+        helpExecution = homeHelp.helpExecution,
+        reloadData = () => {
+          onDisable()
+          setup(ignoreOneTime = true)
+        }
+      )
+      val homesCmd = HomeCommands.homesCommand
+  
+      homeHelp.registerCommand(homeCmd)
+      homeHelp.registerCommand(homesCmd)
+  
+      getLifecycleManager.registerEventHandler(
+        LifecycleEvents.COMMANDS.newHandler: event =>
+          homeCmd.registerBrigadier(event.registrar, this)
+          homesCmd.registerBrigadier(event.registrar, this)
+      )
+  end setup
+  
+  override def onEnable(): Unit =
+    setup(ignoreOneTime = false)
 
   override def onDisable(): Unit = runDisableActions()

@@ -83,7 +83,7 @@ object PaperPlugin extends AutoPlugin {
       }
     ),
     jarInJarFiles := Map.empty,
-    packageBin := {
+    Compile / packageBin := {
       import java.nio.file.Files
       import java.util.jar.{JarEntry, JarInputStream, JarOutputStream}
 
@@ -120,7 +120,7 @@ object PaperPlugin extends AutoPlugin {
     buildInfoRenderFactory := { (a, b, c) => new FallibleJavaStaticFieldsRenderer(a, b, c) },
     debugBuild := {
       val fatJar = (Compile / packageBin).value
-      IO.copyFile(fatJar, file("../run/plugins/" + fatJar.getName))
+      IO.copyFile(fatJar, file("../Server/plugins/" + fatJar.getName))
     }
   )
 }

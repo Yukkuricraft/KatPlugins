@@ -4,7 +4,7 @@ import net.katsstuff.bukkit.katlib.text.*
 import net.kyori.adventure.text.event.ClickEvent
 
 def confirmButton(button: Text, text: String): Text =
-  t"[$button]".clickEvent(ClickEvent.suggestCommand(text))
+  t"[$button]".clickEvent(ClickEvent.suggestCommand(text)).hoverEvent(t"$text")
 
 def button(button: Text, text: String): Text =
   t"[$button]".clickEvent(ClickEvent.runCommand(text)).hoverEvent(t"$text")

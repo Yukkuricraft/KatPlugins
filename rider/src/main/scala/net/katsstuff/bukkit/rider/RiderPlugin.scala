@@ -1,5 +1,6 @@
 package net.katsstuff.bukkit.rider
 
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.command.{Command, Senders}
 import net.katsstuff.bukkit.katlib.text.*
@@ -7,6 +8,7 @@ import org.bukkit.Material
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.{EventHandler, Listener}
 
+//noinspection UnstableApiUsage
 class RiderPlugin extends ScalaPlugin with Listener:
 
   implicit val plugin: RiderPlugin = this
@@ -23,7 +25,7 @@ class RiderPlugin extends ScalaPlugin with Listener:
 
   override def onEnable(): Unit =
     server.getPluginManager.registerEvents(this, this)
-    ejectCommand.register(this)
+    getLifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS.newHandler(event => ejectCommand.registerBrigadier(event.registrar, this)))
 
   override def onDisable(): Unit =
     PlayerInteractEntityEvent.getHandlerList.unregister(this: Listener)

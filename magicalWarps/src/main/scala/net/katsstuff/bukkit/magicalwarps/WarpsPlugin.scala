@@ -3,11 +3,9 @@ package net.katsstuff.bukkit.magicalwarps
 import java.nio.file.Path
 import java.util.logging.Logger
 import javax.sql.DataSource
-
 import scala.compiletime.uninitialized
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
-
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
@@ -16,6 +14,7 @@ import cats.syntax.all.*
 import dataprism.skunk.sql.{SkunkSessionDb, SkunkSessionPoolDb}
 import dataprism.sql.Db
 import fs2.io.net.Network
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import natchez.Trace
 import natchez.Trace.Implicits.noop
 import net.katsstuff.bukkit.katlib.ScalaPlugin
@@ -28,7 +27,6 @@ import skunk.Session
 
 class WarpsPlugin extends ScalaPlugin {
 
-  override val useCommandmap: Boolean                  = true
   override val commandMapDefaultFallbackPrefix: String = "magicalwarps"
 
   given plugin: WarpsPlugin = this
@@ -120,8 +118,14 @@ class WarpsPlugin extends ScalaPlugin {
           case None => throw new Exception("Misssing database configuration for Postgres storage")
         }
 
-  override def onEnable(): Unit = {
-    runKatLibSetup()
+  //noinspection UnstableApiUsage
+  def setup(ignoreOneTime: Boolean): Unit =
+    if ignoreOneTime then
+      runKatLibRepeatableSetup()
+    else
+      runKatLibSetup()
+
+      runKatLibSetup()
 
     warpsConfig = loadConfig().get
 
@@ -151,23 +155,31 @@ class WarpsPlugin extends ScalaPlugin {
         Teleporter.sameServerTeleporter
     }
     given Teleporter = teleporterVal
+    
+    if !ignoreOneTime then
+      val helpCmd     = new HelpCmd(this)
+      val warpCommand = Commands.warp(helpCmd.helpExecution)
+      val warpsCommand = Commands.warps(
+        helpExecution = helpCmd.helpExecution,
+        reloadData = () => {
+          onDisable()
+          onEnable()
+        }
+      )
+  
+      helpCmd.registerCommand(warpCommand)
+      helpCmd.registerCommand(warpsCommand)
+      
+      getLifecycleManager.registerEventHandler(
+        LifecycleEvents.COMMANDS.newHandler: event=>
+          warpCommand.registerBrigadier(event.registrar, this)
+          warpsCommand.registerBrigadier(event.registrar, this)
+      )
+  end setup
+  
 
-    val helpCmd     = new HelpCmd(this)
-    val warpCommand = Commands.warp(helpCmd.helpExecution)
-    val warpsCommand = Commands.warps(
-      helpExecution = helpCmd.helpExecution,
-      reloadData = () => {
-        onDisable()
-        onEnable()
-      }
-    )
-
-    helpCmd.registerCommand(warpCommand)
-    helpCmd.registerCommand(warpsCommand)
-
-    warpCommand.register(this)
-    warpsCommand.register(this)
-  }
+  override def onEnable(): Unit =
+    setup(ignoreOneTime = false)
 
   override def onDisable(): Unit = runDisableActions()
 }

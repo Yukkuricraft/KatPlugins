@@ -42,7 +42,7 @@ class HelpCmd(plugin: ScalaPlugin):
         .fold(registeredCommands.toSeq) { head =>
           registeredCommands.toSeq.filter(_.names.contains(head.toLowerCase))
         }
-        .filter(_.permission.fold(true)(sender.hasPermission))
+        .filter(_.permissionOpt.fold(true)(sender.hasPermission))
 
       if commandsToProcess.isEmpty then Left(s"No commands match ${args.head}")
       else if args.lengthIs < 2 then

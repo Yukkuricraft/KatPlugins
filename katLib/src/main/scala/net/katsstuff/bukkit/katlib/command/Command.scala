@@ -1,26 +1,34 @@
 package net.katsstuff.bukkit.katlib.command
 
+import java.util
+
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext}
 import scala.jdk.CollectionConverters.*
+
 import cats.data.{NonEmptyList, Validated}
 import cats.syntax.all.*
 import com.destroystokyo.paper.event.server.AsyncTabCompleteEvent
 import info.debatty.java.stringsimilarity.RatcliffObershelp
-import io.papermc.paper.command.brigadier.Commands
+import io.papermc.paper.command.brigadier.{BasicCommand, CommandSourceStack, Commands}
 import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.text.*
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
-import org.bukkit.command.{CommandExecutor, CommandSender, Command as BukkitCommand}
+import org.bukkit.command.{Command as BukkitCommand, CommandExecutor, CommandSender}
 import org.bukkit.event.{EventHandler, Listener}
 
-class Command(val names: Seq[String], val permission: Option[String], val executions: Executions)(
+//noinspection UnstableApiUsage
+class Command(val names: Seq[String], val permissionOpt: Option[String], val executions: Executions)(
     using ExecutionContext
 ) extends BukkitCommand(names.head, "", "", names.tail.asJava),
       CommandExecutor,
-      Listener:
+      Listener,
+      BasicCommand:
+
+  setPermission(permissionOpt.orNull)
+
   override def onCommand(
       source: CommandSender,
       command: BukkitCommand,
@@ -100,6 +108,19 @@ class Command(val names: Seq[String], val permission: Option[String], val execut
       val res = Await.result(executions.tabCompleteAsync(event.getSender, args.tail).asFuture, 1.seconds)
       event.setCompletions(res.asJava)
 
+  override def execute(commandSourceStack: CommandSourceStack, args: Array[String]): Unit =
+    onCommand(commandSourceStack.getSender, this, names.head, args)
+
+  override def suggest(commandSourceStack: CommandSourceStack, argsArr: Array[String]): util.Collection[String] =
+    val argsStr = argsArr.mkString(" ")
+    val args = RawCmdArg.stringToRawArgsQuoted(argsStr)
+    val res = Await.result(executions.tabCompleteAsync(commandSourceStack.getExecutor, args).asFuture, 1.seconds)
+    res.asJava
+
+  override def canUse(sender: CommandSender): Boolean = permissionOpt.forall(sender.hasPermission)
+
+  override def permission: String = permissionOpt.orNull
+
   def register(plugin: ScalaPlugin): Unit =
     Bukkit.getPluginManager.registerEvents(this, plugin)
 
@@ -112,6 +133,9 @@ class Command(val names: Seq[String], val permission: Option[String], val execut
   def registerCommandMap(plugin: ScalaPlugin, fallbackPrefix: String): Unit =
     Bukkit.getServer.getCommandMap.register(fallbackPrefix, this)
     Bukkit.getPluginManager.registerEvents(this, plugin)
+
+  def registerBrigadier(commands: Commands, plugin: ScalaPlugin): Unit =
+    commands.register(names.head, names.tail.asJava, this)
 
   private[command] def unregister(plugin: ScalaPlugin): Unit =
     for name <- names do

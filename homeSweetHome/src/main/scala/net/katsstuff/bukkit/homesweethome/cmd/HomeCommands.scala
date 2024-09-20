@@ -338,6 +338,8 @@ object HomeCommands:
         ) { case (player, searchQueries) =>
           val params: Map[Class[? <: HomeSearchQuery[?]], HomeSearchQuery[?]] =
             searchQueries.toList.map(q => q.getClass -> q).toMap // One query per property
+            
+          println(s"Search executed $params")
 
           inline def getProp[Q <: HomeSearchQuery[?]](using tag: ClassTag[Q]): Option[HomeSearchQuery.Tpe[Q]] =
             params.get(tag.runtimeClass.asInstanceOf[Class[Q]]).map(_.value.asInstanceOf[HomeSearchQuery.Tpe[Q]])
@@ -355,6 +357,8 @@ object HomeCommands:
               val paginationBase = Bukkit.getServicesManager.load(classOf[PaginationService])
 
               def df(d: Double): String = f"$d%.2f"
+              
+              println(s"Home search result $homes")
 
               val body = homes.flatMap { home =>
                 def teleportButton =
@@ -373,7 +377,7 @@ object HomeCommands:
                             player.sendMessage(t"${TextColor.Red}$e")
                           }
                       },
-                      ClickCallback.Options.builder().uses(512).build()
+                      ClickCallback.Options.builder().uses(-1).build()
                     )
                   )
 
@@ -386,14 +390,16 @@ object HomeCommands:
                   t"X: ${df(home.x)} Y: ${df(home.y)} Z: ${df(home.z)} World: $worldName"
                 )
               }
-
-              paginationBase
-                .copyObj(
-                  title = Some(t"Home search"),
-                  linesPerPage = 20,
-                  content = body
-                )
-                .sendTo(player)
+              
+              if body.nonEmpty then
+                paginationBase
+                  .copyObj(
+                    title = Some(t"Home search"),
+                    linesPerPage = 20,
+                    content = body
+                  )
+                  .sendTo(player)
+              else player.sendMessage(t"${Yellow}No homes found with these parameters")
 
               Right(())
             }
@@ -412,6 +418,7 @@ object HomeCommands:
                 case Success(()) =>
                   sender.sendMessage(t"${Green}Reload success")
                 case Failure(e) =>
+                  e.printStackTrace()
                   sender.sendMessage(t"$Red${e.getMessage}")
               }
 
@@ -511,8 +518,8 @@ object HomeCommands:
 
       if homes.isEmpty then
         if isOther
-        then sender.sendMessage(t"${Yellow}Limit: $limit\n${owner.getName} don't have any homes.")
-        else sender.sendMessage(t"${Yellow}Limit: $limit\nYou don't have any homes.")
+        then sender.sendMessage(t"${Yellow}Limit: $limit${Component.newline()}${owner.getName} don't have any homes.")
+        else sender.sendMessage(t"${Yellow}Limit: $limit${Component.newline()}You don't have any homes.")
       else
         val paginationBase = Bukkit.getServicesManager.load(classOf[PaginationService])
         val commandPrefix  = if isOther then s"/home other ${owner.getName}" else "/home"

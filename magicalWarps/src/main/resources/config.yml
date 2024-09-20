@@ -1,0 +1,51 @@
+# Don't touch this
+version: 1
+
+# Server name used to teleporting users between servers
+serverName: global
+
+storage:
+
+  # Type of storage that will be used.
+  #
+  # - Postgres
+  #   Uses a postgres database to store everything.
+  #
+  # - SingleFile
+  #   Uses a single file for all warps, which is loaded into memory when the
+  #   server starts. Takes a lot of memory, and not optimized for many warps.
+  #   Most operations are instant. Looking up warps in a radius might lag the
+  #   server a bit if there are many warps. Does not store everything the other
+  #   storage types do.
+  type: Postgres
+
+  # Postgres configuration
+  postgres:
+    # If Postgres should be initialized
+    use: false
+    
+    # DB Host
+    host: 'localhost'
+    
+    # DB Port 
+    port: 5432
+    
+    # Username for the DB
+    user: ''
+
+    # Password for the DB
+    password: ''
+    
+    # Database to use
+    database: ''
+
+# How multiple servers should communicate with each other to make MagicalWarps work 
+# seamlessly across servers.
+#
+# - Postgres
+#   Uses postgres to manage communication.
+#
+# - Single
+#   No multi-server communication. If a warp does not exist on the current 
+#   server, the player has to teleport to the server it exists on manually.
+crossServerCommunication: Postgres

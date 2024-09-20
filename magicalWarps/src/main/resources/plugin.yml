@@ -1,0 +1,90 @@
+name: MagicalWarps
+main: net.katsstuff.bukkit.magicalwarps.WarpsPlugin
+version: 2.2.0
+author: Katrix
+depend: [Vault]
+softdepend: [dynmap]
+commands:
+  warp:
+    description: Teleport to a warp
+    permission: magicalwarps.warps.teleport
+  warps:
+    description: See all warps, optionally for a specific group
+    permission: magicalwarps.warps.list
+  sendwarp:
+    description: Send a player to a warp
+    permission: magicalwarps.mod.send
+  magicalwarps:
+    description: Info about MagicalWarps
+    permission: magicalwarps.info
+  callback:
+    description: Internal commanhd
+  page:
+    description: Mostly internal command
+permissions:
+  magicalwarps.user:
+    description: Gives access to normal user permissions
+    children:
+      magicalwarps.warps.teleport: true
+      magicalwarps.warps.list: true
+  magicalwarps.mod:
+    description: Gives access to mod permissions
+    children:
+      magicalwarps.mod.send: true
+      magicalwarps.mod.set: true
+      magicalwarps.mod.modifygroup: true
+      magicalwarps.mod.modifyallowed: true
+      magicalwarps.mod.setlore: true
+      magicalwarps.mod.rename: true
+      magicalwarps.mod.setdisplayname: true
+      magicalwarps.mod.remove: true
+      magicalwarps.mod.warpinfo: true
+  magicalwarps.warps.teleport:
+    description: Teleport to a warp
+    default: true
+  magicalwarps.warps.list:
+    description: See all warps, optionally for a specific group
+    default: true
+  magicalwarps.mod.send:
+    description: Send a player to a warp
+    default: op
+  magicalwarps.mod.set:
+    description: Sets a new warp
+    default: op
+  magicalwarps.mod.modifygroup:
+    description: Modify a warps group
+    default: op
+  magicalwarps.mod.modifyallowed:
+    description: Modify a warps allowed entities
+    default: op
+  magicalwarps.mod.setlore:
+    description: Sets the lore of a warp
+    default: op
+  magicalwarps.mod.rename:
+    description: Sets the name of a warp
+    default: op
+  magicalwarps.mod.setdisplayname:
+    description: Sets the display name of a warp
+    default: op
+  magicalwarps.mod.remove:
+    description: Removes a warp
+    default: op
+  magicalwarps.mod.warpinfo:
+    description: See info for a warp
+    default: op
+  magicalwarps.info:
+    description: See info for MagicalWarps
+    default: op
+  magicalwarps.mod.reload:
+    description: Reloads the config and storage of MagicalWarps
+    default: op
+
+libraries:
+  - org.scala-lang:scala3-library_3:3.3.1
+  - org.typelevel:cats-core_3:2.9.0
+  - io.circe:circe-core_3:0.14.5
+  - io.circe:circe-parser_3:0.14.5
+  - net.katsstuff:dataprism-skunk_3:0.0.0+49-74aab485-SNAPSHOT
+  - net.katsstuff:perspective-derivation_3:0.2.0+17-d7d68444-SNAPSHOT
+  - org.tpolecat:skunk-core_3:0.6.3
+  - org.tpolecat:skunk-circe_3:0.6.3

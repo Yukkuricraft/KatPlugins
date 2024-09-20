@@ -31,9 +31,9 @@ case class OldWarp(
     world,
     config.serverName,
     displayName,
-    groups,
-    allowedPermGroups,
-    allowedUsers,
+    groups.toSeq,
+    allowedPermGroups.toSeq,
+    allowedUsers.toSeq,
     lore
   )
 object OldWarp:

@@ -9,8 +9,7 @@ import cats.syntax.all.*
 import dataprism.skunk.sql.SkunkTypes.*
 import dataprism.sql.*
 import net.katsstuff.bukkit.katlib.ScalaPlugin
-import skunk.util.Origin
-import skunk.{Codec, Command, Session}
+import skunk.Codec
 
 object DbUpdates {
 

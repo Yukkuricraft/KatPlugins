@@ -44,8 +44,8 @@ object Commands {
       Parameters.string.map(WarpGroup.apply)).named("group")
 
   val userOrGroupParameter: Parameter[UserOrGroup] =
-    Parameter.literalPrefix("p:", single(Parameters.offlinePlayers)).map(UserOrGroup.User.apply) |
-      Parameter.literalPrefix("g:", Parameters.string.named("group")).map(UserOrGroup.Group.apply)
+    ("player" ~> single(Parameters.offlinePlayers).map[UserOrGroup](UserOrGroup.User.apply)) |
+      ("group" ~> Parameters.string.named("group")).map[UserOrGroup](UserOrGroup.Group.apply)
 
   def warpListExecution(using warpStorage: WarpStorage)(using ScalaPlugin): Executions =
     AggExecutions(
@@ -138,14 +138,14 @@ object Commands {
         helpExecution
       ),
       asyncExecution(
-        "set" ~> Parameters.string ~ many(Parameters.string),
+        "set" ~> Parameters.string ~ optional(Parameters.string),
         Senders.player,
         LibPerm.Set,
         description = _ => Some(t"Set a new warp")
-      ) { case (player, warpName ~ groups) =>
+      ) { case (player, warpName ~ optGroup) =>
         warpStorage
           .setWarp(
-            Warp.fromLocation(warpName, player.getLocation).copy(groups = groups.toSet)
+            Warp.fromLocation(warpName, player.getLocation).copy(groups = optGroup.toSeq)
           )
           .map { _ =>
             player.sendMessage(t"${Green}Set warp $Aqua$warpName")
@@ -194,14 +194,14 @@ object Commands {
                 action: (Warp, Set[UUID], Set[String]) => Warp
             ) = {
               asyncExecution(
-                param ~ name ~ many1(userOrGroupParameter),
+                param ~ name ~ userOrGroupParameter,
                 Senders.commandSender,
                 LibPerm.ModifyAllowed,
                 description = _ => Some(description)
-              ) { case (sender, warp ~ _ ~ userOrGroups) =>
-                val (users, groups) = userOrGroups.toList.partitionEither {
-                  case UserOrGroup.User(user)   => Left(user)
-                  case UserOrGroup.Group(group) => Right(group)
+              ) { case (sender, warp ~ _ ~ userOrGroup) =>
+                val (users, groups) = userOrGroup match {
+                  case UserOrGroup.User(user)   => (Seq(user), Nil)
+                  case UserOrGroup.Group(group) => (Nil, Seq(group))
                 }
 
                 warpStorage.setWarp(action(warp, users.map(_.getUniqueId).toSet, groups.toSet)).map { _ =>
@@ -215,8 +215,8 @@ object Commands {
               allowExecution("add", t"Add allowed to warp", name => t"${Green}Added allowed to $Aqua$name") {
                 (warp, users, groups) =>
                   warp.copy(
-                    allowedUsers = warp.allowedUsers.union(users),
-                    allowedPermGroups = warp.allowedPermGroups.union(groups)
+                    allowedUsers = warp.allowedUsers.concat(users).distinct,
+                    allowedPermGroups = warp.allowedPermGroups.concat(groups).distinct
                   )
               },
               allowExecution(
@@ -225,28 +225,28 @@ object Commands {
                 name => t"${Green}Removed allowed from $Aqua$name"
               ) { (warp, users, groups) =>
                 warp.copy(
-                  allowedUsers = warp.allowedUsers -- users,
-                  allowedPermGroups = warp.allowedPermGroups -- groups
+                  allowedUsers = (warp.allowedUsers.toSet -- users).toSeq,
+                  allowedPermGroups = (warp.allowedPermGroups.toSet -- groups).toSeq
                 )
               }
             )
           },
           withArg(param <~ "groups") { param =>
             def groupExecution(name: String, description: Text, success: Text => Text)(
-                action: (Warp, Set[String]) => Warp
+                action: (Warp, String) => Warp
             ) =
               asyncExecution(
-                param ~ name ~ many1(warpGroupParameter),
+                param ~ name ~ warpGroupParameter,
                 Senders.commandSender,
                 LibPerm.ModifyGroup,
                 description = _ => Some(description)
-              ) { case (sender, warp ~ _ ~ groups) =>
-                val stringGroups = groups.map(_.name).toList.toSet
+              ) { case (sender, warp ~ _ ~ group) =>
+                val stringGroup = group.name
 
-                if (stringGroups.contains("all")) {
+                if (stringGroup == "all") {
                   FutureOrNow.now(Left("""Illegal group name "all""""))
                 } else {
-                  warpStorage.setWarp(action(warp, stringGroups)).map { _ =>
+                  warpStorage.setWarp(action(warp, stringGroup)).map { _ =>
                     sender.sendMessage(success(warp.textDisplayName))
                     Right(())
                   }
@@ -258,15 +258,15 @@ object Commands {
                 "add",
                 t"Add group(s) to a warp",
                 name => t"${Green}Added group to $Aqua$name"
-              ) { (warp, groups) =>
-                warp.copy(groups = warp.groups.union(groups))
+              ) { (warp, group) =>
+                warp.copy(groups = (warp.groups :+ group).distinct)
               },
               groupExecution(
                 "remove",
                 t"Remove group(s) from a warp",
                 name => t"${Green}Removed group from $Aqua$name"
-              ) { (warp, groups) =>
-                warp.copy(groups = warp.groups -- groups)
+              ) { (warp, group) =>
+                warp.copy(groups = warp.groups.filter(_ != group))
               }
             )
           },

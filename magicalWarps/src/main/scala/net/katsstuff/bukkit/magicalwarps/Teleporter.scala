@@ -2,17 +2,16 @@ package net.katsstuff.bukkit.magicalwarps
 
 import java.time.OffsetDateTime
 import java.util.UUID
-
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
-
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 import dataprism.KMacros
 import dataprism.skunk.platform.PostgresSkunkPlatform.Api.*
 import dataprism.skunk.sql.SkunkTypes.*
 import dataprism.sql.*
 import io.circe.DecodingFailure
+import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.text.*
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import org.bukkit.event.player.PlayerJoinEvent
@@ -29,7 +28,7 @@ object Teleporter {
 
   given SqlOrdered[OffsetDateTime] = SqlOrdered.defaultInstance[OffsetDateTime]
 
-  private class SameServerTeleporter(using hshConfig: WarpsConfig, plugin: WarpsPlugin) extends Teleporter:
+  private class SameServerTeleporter(using hshConfig: WarpsConfig, plugin: ScalaPlugin) extends Teleporter:
     def teleportReportingError(
         player: GlobalPlayer,
         destination: Location,
@@ -69,7 +68,7 @@ object Teleporter {
           }
         case _ => Left("Cross server teleportation is not enabled")
 
-  def sameServerTeleporter(using hshConfig: WarpsConfig, plugin: WarpsPlugin): Teleporter = new SameServerTeleporter
+  def sameServerTeleporter(using hshConfig: WarpsConfig, plugin: ScalaPlugin): Teleporter = new SameServerTeleporter
 
   private[Teleporter] case class DelayedTeleportK[F[_]](
       uuid: F[UUID],
@@ -113,21 +112,19 @@ object Teleporter {
     extension (tp: DelayedTeleportK[perspective.Id])
       def toLocation: Location = new Location(null, tp.x, tp.y, tp.z, tp.yaw, tp.pitch)
 
-  def crossServerPostgresTeleporter(
+  def crossServerPostgresTeleporter(pool: Resource[IO, Session[IO]])(
       using hshConfig: WarpsConfig,
       homePlugin: WarpsPlugin,
       bungeeChannel: BungeeChannel,
       db: Db[Future, Codec],
-      session: Session[IO],
       ec: ExecutionContext
-  ): Teleporter with Listener with AutoCloseable = new CrossServerPostgresTeleporter
+  ): Teleporter & Listener & AutoCloseable = new CrossServerPostgresTeleporter(pool)
 
-  class CrossServerPostgresTeleporter(
-      using warpConfig: WarpsConfig,
+  class CrossServerPostgresTeleporter(sessionPool: Resource[IO, Session[IO]])(
+      using hshConfig: WarpsConfig,
       homePlugin: WarpsPlugin,
       bungeeChannel: BungeeChannel,
       db: Db[Future, Codec],
-      session: Session[IO],
       ec: ExecutionContext
   ) extends Teleporter
       with Listener
@@ -146,7 +143,7 @@ object Teleporter {
             Query
               .from(DelayedTeleportK.table)
               .where { d =>
-                d.server === warpConfig.serverName
+                d.server === hshConfig.serverName
                   .as(text) && d.expires < OffsetDateTime.now().as(timestamptz)
               }
           ).run.foreach { res =>
@@ -157,12 +154,12 @@ object Teleporter {
                     GlobalPlayer.OnThisServer(player),
                     tp.toLocation,
                     tp.worldUuid,
-                    warpConfig.serverName
+                    hshConfig.serverName
                   )
                   .foreach { _ =>
                     Delete
                       .from(DelayedTeleportK.table)
-                      .where(d => d.server === warpConfig.serverName.as(text) && d.uuid === player.getUniqueId.as(uuid))
+                      .where(d => d.server === hshConfig.serverName.as(text) && d.uuid === player.getUniqueId.as(uuid))
                       .run
                   }
               }
@@ -172,9 +169,9 @@ object Teleporter {
         },
       60.seconds,
       "HomeSweetHome.DelayedTeleportChange",
-      session,
+      sessionPool,
       onCreate = Some((old, json) =>
-        if json.hcursor.get[String]("server").contains(warpConfig.serverName) then
+        if json.hcursor.get[String]("server").contains(hshConfig.serverName) then
           val h = json.hcursor
 
           for
@@ -193,12 +190,12 @@ object Teleporter {
                 GlobalPlayer.OnThisServer(player),
                 location,
                 worldUuid,
-                warpConfig.serverName
+                hshConfig.serverName
               )
               .foreach { _ =>
                 Delete
                   .from(DelayedTeleportK.table)
-                  .where(d => d.server === warpConfig.serverName.as(text) && d.uuid === uuidV.as(uuid))
+                  .where(d => d.server === hshConfig.serverName.as(text) && d.uuid === uuidV.as(uuid))
                   .run
               }
 
@@ -218,7 +215,7 @@ object Teleporter {
           .from(DelayedTeleportK.table)
           .where { d =>
             d.uuid === player.getUniqueId.as(uuid) &&
-            d.server === warpConfig.serverName.as(text) &&
+            d.server === hshConfig.serverName.as(text) &&
             d.expires < OffsetDateTime.now().as(timestamptz)
           }
       ).runMaybeOne[Future].foreach { res =>
@@ -227,13 +224,13 @@ object Teleporter {
             GlobalPlayer.OnThisServer(player),
             tp.toLocation,
             tp.worldUuid,
-            warpConfig.serverName
+            hshConfig.serverName
           )
         }
       }
 
     private def makeDelayedTeleport(toTeleport: UUID, destination: Location, worldUuid: UUID, server: String): Unit =
-      if server == warpConfig.serverName && Bukkit.getPlayer(toTeleport) != null then
+      if server == hshConfig.serverName && Bukkit.getPlayer(toTeleport) != null then
         sameServerHandler.teleportReportingError(
           GlobalPlayer.OnThisServer(Bukkit.getPlayer(toTeleport)),
           destination,
@@ -264,7 +261,7 @@ object Teleporter {
         worldUuid: UUID,
         server: String
     ): Either[String, Unit] = player match
-      case GlobalPlayer.OnThisServer(_) if warpConfig.serverName == server =>
+      case GlobalPlayer.OnThisServer(_) if hshConfig.serverName == server =>
         sameServerHandler.teleport(player, destination, worldUuid, server)
 
       case GlobalPlayer.OnThisServer(player) =>

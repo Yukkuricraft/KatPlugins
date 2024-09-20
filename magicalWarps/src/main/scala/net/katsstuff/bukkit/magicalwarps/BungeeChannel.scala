@@ -1,5 +1,6 @@
 package net.katsstuff.bukkit.magicalwarps
 
+import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.text.*
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer
 import org.bukkit.entity.Player
@@ -10,7 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.collection.{concurrent, mutable}
 import scala.concurrent.{Future, Promise}
 
-class BungeeChannel(using plugin: WarpsPlugin) extends PluginMessageListener:
+class BungeeChannel(using plugin: ScalaPlugin) extends PluginMessageListener:
 
   private val promises: mutable.Map[String, ConcurrentLinkedQueue[Promise[Array[Byte]]]] = concurrent.TrieMap()
 
@@ -58,8 +59,8 @@ class BungeeChannel(using plugin: WarpsPlugin) extends PluginMessageListener:
     sendBungeeMessage(sender, "ConnectOther", toSend, server)
 
   def sendMessage(sender: Player, playerName: String, message: Text): Unit =
-    val messageJson = JSONComponentSerializer.json().serialize(message)
-    sendBungeeMessage(sender, "MessageRaw", playerName, messageJson)
+    val jsonMessage = JSONComponentSerializer.json().serialize(message)
+    sendBungeeMessage(sender, "MessageRaw", playerName, jsonMessage)
 
   override def onPluginMessageReceived(channel: String, player: Player, message: Array[Byte]): Unit =
     if channel == "BungeeCord" then

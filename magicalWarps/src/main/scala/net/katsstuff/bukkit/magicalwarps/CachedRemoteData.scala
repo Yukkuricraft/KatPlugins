@@ -1,10 +1,7 @@
 package net.katsstuff.bukkit.magicalwarps
 
-import scala.collection.mutable
-import scala.concurrent.duration.*
-import scala.concurrent.{Await, ExecutionContext}
-
 import cats.effect.IO
+import cats.effect.kernel.Resource
 import io.circe.*
 import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
@@ -12,12 +9,17 @@ import org.bukkit.Bukkit
 import skunk.Session
 import skunk.data.Identifier
 
+import scala.collection.mutable
+import scala.compiletime.uninitialized
+import scala.concurrent.duration.*
+import scala.concurrent.{Await, ExecutionContext}
+
 class CachedRemoteData[A <: AnyRef](fetchData: () => FutureOrNow[A], refreshTime: FiniteDuration)(
     using sc: ScalaPlugin,
     ec: ExecutionContext
 ) extends AutoCloseable:
-  private var currentData: A                                = _
-  protected val mapped: mutable.Buffer[CachedRemoteData[_]] = mutable.Buffer()
+  private var currentData: A                                = uninitialized
+  protected val mapped: mutable.Buffer[CachedRemoteData[?]] = mutable.Buffer()
 
   refreshNow()
 
@@ -73,7 +75,7 @@ object CachedRemoteData:
       fetchData: () => FutureOrNow[A],
       refreshTime: FiniteDuration,
       postgresChannel: String,
-      session: Session[IO],
+      sessionPool: Resource[IO, Session[IO]],
       onCreate: Option[(A, Json) => Either[DecodingFailure, A]] = None,
       onUpdate: Option[(A, Json) => Either[DecodingFailure, A]] = None,
       onDelete: Option[(A, Json) => Either[DecodingFailure, A]] = None,
@@ -81,7 +83,7 @@ object CachedRemoteData:
   )(using sc: WarpsPlugin)(
       using ExecutionContext
   ) extends CachedRemoteData[A](fetchData, refreshTime) {
-    private var closeIo: IO[Unit] = _
+    private var closeIo: IO[Unit] = uninitialized
     startListenForNotify()
 
     private val allOperations = Seq("CREATE" -> onCreate, "UPDATE" -> onUpdate, "DELETE" -> onDelete)
@@ -93,8 +95,15 @@ object CachedRemoteData:
       }
 
     private def startListenForNotify(): Unit = {
-      val channel         = session.channel(Identifier.fromString(postgresChannel).toOption.get)
-      val (stream, close) = sc.dispatcher.unsafeRunSync(channel.listenR(512).allocated)
+      val (stream, close) = sc.dispatcher.unsafeRunSync(
+        for
+          t1 <- sessionPool.allocated
+          (session, close1) = t1
+          t2 <- session.channel(Identifier.fromString(postgresChannel).toOption.get).listenR(512).allocated
+          (stream, close2) = t2
+        yield (stream, close2 *> close1)
+      )
+      
       closeIo = close
 
       sc.dispatcher.unsafeRunAndForget(
@@ -125,7 +134,7 @@ object CachedRemoteData:
       fetchData: () => FutureOrNow[A],
       refreshTime: FiniteDuration,
       postgresChannel: String,
-      session: Session[IO],
+      sessionPool: Resource[IO, Session[IO]],
       onCreate: Option[(A, Json) => Either[DecodingFailure, A]] = None,
       onUpdate: Option[(A, Json) => Either[DecodingFailure, A]] = None,
       onDelete: Option[(A, Json) => Either[DecodingFailure, A]] = None,
@@ -134,4 +143,13 @@ object CachedRemoteData:
       using WarpsPlugin,
       ExecutionContext
   ): CachedRemoteData[A] =
-    new PostgresCached(fetchData, refreshTime, postgresChannel, session, onCreate, onUpdate, onDelete, customOperations)
+    new PostgresCached(
+      fetchData,
+      refreshTime,
+      postgresChannel,
+      sessionPool,
+      onCreate,
+      onUpdate,
+      onDelete,
+      customOperations
+    )

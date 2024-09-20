@@ -1,16 +1,14 @@
 package net.katsstuff.bukkit.magicalwarps
 
-import java.io.BufferedReader
-
-import scala.jdk.StreamConverters.*
-
 import cats.effect.{IO, Resource}
 import cats.syntax.all.*
 import dataprism.skunk.sql.SkunkTypes.*
 import dataprism.sql.*
 import net.katsstuff.bukkit.katlib.ScalaPlugin
-import skunk.util.Origin
-import skunk.{Codec, Command, Session}
+import skunk.Codec
+
+import java.io.BufferedReader
+import scala.jdk.StreamConverters.*
 
 object DbUpdates {
 
@@ -18,7 +16,7 @@ object DbUpdates {
 
   private def runDbUpdatesFrom(
       previousVersion: Int
-  )(using session: Session[IO], plugin: ScalaPlugin): IO[Unit] =
+  )(using db: TransactionalDb[IO, Codec], plugin: ScalaPlugin): IO[Unit] =
     val versionToWrite = previousVersion + 1
     Resource
       .make(IO(Option(plugin.textResource(s"db-updates/$versionToWrite.sql")))) {
@@ -29,13 +27,13 @@ object DbUpdates {
       .use(_.traverse(r => IO.blocking(r.lines().toScala(Seq).mkString("\n"))))
       .flatMap {
         case Some(sqlMigration) =>
-          val runMigration = session.transaction.surround(
+          val runMigration = db.transaction { (tx: TransactionDb[IO, Codec]) ?=>
             sqlMigration
               .split(";")
               .toSeq
-              .map(s => Command(s, Origin.instance, skunk.Void.codec))
-              .traverse_(session.execute)
-          )
+              .map(s => SqlStr.const(s))
+              .traverse_(tx.run)
+          }
 
           if versionToWrite < currentDbVersion then runMigration *> runDbUpdatesFrom(versionToWrite)
           else runMigration
@@ -46,8 +44,7 @@ object DbUpdates {
     db.run(sql"UPDATE version SET version = (${currentDbVersion.toShort.asArg(int2.codec)})")
 
   def updateIfNeeded()(
-      using db: Db[IO, Codec],
-      session: Session[IO],
+      using db: TransactionalDb[IO, Codec],
       plugin: ScalaPlugin
   ): IO[Unit] =
     for

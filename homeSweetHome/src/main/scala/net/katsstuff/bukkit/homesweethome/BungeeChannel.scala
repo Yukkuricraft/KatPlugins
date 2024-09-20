@@ -6,12 +6,13 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import scala.collection.{concurrent, mutable}
 import scala.concurrent.{Future, Promise}
 
+import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.text.*
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer
 import org.bukkit.entity.Player
 import org.bukkit.plugin.messaging.PluginMessageListener
 
-class BungeeChannel(using plugin: HomePlugin) extends PluginMessageListener:
+class BungeeChannel(using plugin: ScalaPlugin) extends PluginMessageListener:
 
   private val promises: mutable.Map[String, ConcurrentLinkedQueue[Promise[Array[Byte]]]] = concurrent.TrieMap()
 

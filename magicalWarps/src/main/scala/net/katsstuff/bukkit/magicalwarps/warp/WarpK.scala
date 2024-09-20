@@ -28,9 +28,9 @@ case class WarpK[F[_]](
     world: F[UUID],
     server: F[String],
     displayName: F[Option[Text]],
-    groups: F[Set[String]],
-    allowedPermGroups: F[Set[String]],
-    allowedUsers: F[Set[UUID]],
+    groups: F[Seq[String]],
+    allowedPermGroups: F[Seq[String]],
+    allowedUsers: F[Seq[UUID]],
     lore: F[Option[Text]]
 )
 
@@ -41,8 +41,8 @@ object WarpK:
       float: F[Float],
       uuid: F[UUID],
       optText: F[Option[Text]],
-      setString: F[Set[String]],
-      setUuid: F[Set[UUID]]
+      setString: F[Seq[String]],
+      setUuid: F[Seq[UUID]]
   ): WarpK[F] =
     WarpK(string, double, double, double, float, float, uuid, string, optText, setString, setString, setUuid, optText)
 
@@ -57,9 +57,9 @@ object WarpK:
       location.getWorld.getUID,
       config.serverName,
       None,
-      Set.empty,
-      Set.empty,
-      Set.empty,
+      Seq.empty,
+      Seq.empty,
+      Seq.empty,
       None
     )
 
@@ -97,19 +97,9 @@ object WarpK:
       world = Column("world_uuid", uuid),
       server = Column("server", text),
       displayName = Column("display_name", mcTextDbType.nullable),
-      groups = Column("groups", _text.imap(_.flattenTo(Set))(s => Arr(s.toSeq*))),
-      allowedPermGroups = Column("allowed_perm_groups", _text.imap(_.flattenTo(Set))(s => Arr(s.toSeq*))),
-      allowedUsers = Column(
-        "allowed_users",
-        skunk.Codec
-          .array[UUID](
-            _.toString,
-            s => Either.catchOnly[IllegalArgumentException](UUID.fromString(s)).leftMap(_.getMessage),
-            skunk.data.Type._uuid
-          )
-          .imap(_.flattenTo(Set))(s => Arr(s.toSeq*))
-          .wrap
-      ),
+      groups = Column("groups", _text),
+      allowedPermGroups = Column("allowed_perm_groups", _text),
+      allowedUsers = Column("allowed_users", arrayOf(uuid)),
       lore = Column("lore", mcTextDbType.nullable)
     )
   )
@@ -136,5 +126,5 @@ object WarpK:
           .map2Const(table.columns)(
             [X] => (t: (X, Encoder[X]), column: Column[skunk.Codec, X]) => column.nameStr -> t._2(t._1)
           )
-          .toListK: _*
+          .toListK*
       )

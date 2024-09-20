@@ -135,7 +135,6 @@ class HomePlugin extends ScalaPlugin:
     runKatLibSetup()
 
     hshConfig = loadConfig().get
-    println(hshConfig)
 
     storage = makeStorage()
     storage.reloadHomeData().failed.foreach(logger.error("Failed to reload home data", _))
@@ -143,8 +142,8 @@ class HomePlugin extends ScalaPlugin:
     val bungeeChannelVal               = new BungeeChannel()
     given bungeeChannel: BungeeChannel = bungeeChannelVal
 
-    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "bungeecord:hsh")
-    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:hsh", bungeeChannel)
+    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "bungeecord:homesweethome")
+    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:homesweethome", bungeeChannel)
 
     addDisableAction {
       this.getServer.getMessenger.unregisterOutgoingPluginChannel(this)

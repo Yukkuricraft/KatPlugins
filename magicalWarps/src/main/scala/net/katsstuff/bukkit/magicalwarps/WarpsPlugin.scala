@@ -3,16 +3,20 @@ package net.katsstuff.bukkit.magicalwarps
 import java.nio.file.Path
 import java.util.logging.Logger
 import javax.sql.DataSource
+
+import scala.compiletime.uninitialized
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
+
 import cats.effect.IO
+import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.IORuntime
 import cats.syntax.all.*
-import dataprism.platform.implementations.PostgresQueryPlatform
-import dataprism.skunk.sql.SkunkDb
+import dataprism.skunk.sql.{SkunkSessionDb, SkunkSessionPoolDb}
 import dataprism.sql.Db
 import fs2.io.net.Network
+import natchez.Trace
 import natchez.Trace.Implicits.noop
 import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.command.HelpCmd
@@ -24,20 +28,23 @@ import skunk.Session
 
 class WarpsPlugin extends ScalaPlugin {
 
+  override val useCommandmap: Boolean                  = true
+  override val commandMapDefaultFallbackPrefix: String = "magicalwarps"
+
   given plugin: WarpsPlugin = this
 
-  private var warpsConfig: WarpsConfig = _
-  private var storage: WarpStorage     = _
+  private var warpsConfig: WarpsConfig = uninitialized
+  private var storage: WarpStorage     = uninitialized
 
   given WarpsConfig = warpsConfig
   given WarpStorage = storage
 
   def exportImportPath: Path = dataFolder.toPath.resolve("export.json")
 
-  private var _dispatcher: Dispatcher[IO] = _
+  private var _dispatcher: Dispatcher[IO] = uninitialized
   def dispatcher: Dispatcher[IO]          = _dispatcher
 
-  private var dbObjs: Option[(Session[IO], Db[Future, skunk.Codec])] = _
+  private var dbObjs: Option[(Resource[IO, Session[IO]], Db[Future, skunk.Codec])] = uninitialized
 
   def loadConfig(): Try[WarpsConfig] =
     WarpsConfig
@@ -49,6 +56,11 @@ class WarpsPlugin extends ScalaPlugin {
         Failure(e)
 
   def makeStorage(): WarpStorage =
+    val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()(using IORuntime.global)
+    this._dispatcher = dispatcher
+
+    addDisableAction(closeDispatcher.unsafeRunSync()(IORuntime.global))
+
     dbObjs =
       if !warpsConfig.storage.postgres.use then None
       else
@@ -56,10 +68,10 @@ class WarpsPlugin extends ScalaPlugin {
           val dbConfig      = warpsConfig.storage.postgres
           given Network[IO] = Network.forIO
 
-          def makeSession() = {
-            val (session, closeSession) = dispatcher.unsafeRunSync(
-              skunk.Session
-                .single[IO](
+          dispatcher.unsafeRunSync(
+            DbUpdates.updateIfNeeded()(
+              using SkunkSessionPoolDb[IO](
+                skunk.Session.single[IO](
                   host = dbConfig.host,
                   port = dbConfig.port,
                   user = dbConfig.user,
@@ -67,22 +79,34 @@ class WarpsPlugin extends ScalaPlugin {
                   password = dbConfig.password,
                   parameters = dbConfig.parameters
                 )
+              ),
+              this
+            )
+          )
+
+          val sessions =
+            val (sessionPool, closeSession) = dispatcher.unsafeRunSync(
+              skunk.Session
+                .pooled[IO](
+                  host = dbConfig.host,
+                  port = dbConfig.port,
+                  user = dbConfig.user,
+                  database = dbConfig.database,
+                  password = dbConfig.password,
+                  max = dbConfig.maxConnections,
+                  parameters = dbConfig.parameters
+                )
                 .allocated
             )
 
             addDisableAction(closeSession.unsafeRunSync()(IORuntime.global))
-            session
-          }
-
-          val otherSession = makeSession()
-          DbUpdates.updateIfNeeded()(using SkunkDb[IO](otherSession), otherSession, this)
-
-          val dbSession = makeSession()
+            sessionPool
+          end sessions
 
           val db: Db[Future, skunk.Codec] =
-            SkunkDb[IO](dbSession).mapK([X] => (fx: IO[X]) => dispatcher.unsafeToFuture(fx))
+            SkunkSessionPoolDb[IO](sessions).mapK([X] => (fx: IO[X]) => dispatcher.unsafeToFuture(fx))
 
-          (otherSession, db)
+          (sessions, db)
         }
 
     warpsConfig.storage.`type` match
@@ -90,7 +114,7 @@ class WarpsPlugin extends ScalaPlugin {
 
       case StorageType.Postgres =>
         dbObjs match {
-          case Some((given Session[IO], given Db[Future, skunk.Codec])) =>
+          case Some((_, given Db[Future, skunk.Codec])) =>
             ??? // new PostgresWarpStorage(new PostgresQueryPlatform)
 
           case None => throw new Exception("Misssing database configuration for Postgres storage")
@@ -104,26 +128,29 @@ class WarpsPlugin extends ScalaPlugin {
     storage = makeStorage()
     storage.reloadWarps().failed.foreach(logger.error("Failed to reload warps", _))
 
-    given bungeeChannel: BungeeChannel = new BungeeChannel()
+    val bungeeChannelVal               = new BungeeChannel()
+    given bungeeChannel: BungeeChannel = bungeeChannelVal
 
-    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "bungeecord:hsh")
-    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:hsh", bungeeChannel)
+    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "bungeecord:magicalwarps")
+    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:magicalwarps", bungeeChannel)
 
     addDisableAction {
       this.getServer.getMessenger.unregisterOutgoingPluginChannel(this)
       this.getServer.getMessenger.unregisterIncomingPluginChannel(this)
     }
 
-    given Teleporter = warpsConfig.crossServerCommunication match {
+    val teleporterVal = warpsConfig.crossServerCommunication match {
       case CrossServerCommunication.Postgres =>
         dbObjs match {
-          case Some((given Session[IO], given Db[Future, skunk.Codec])) =>
-            Teleporter.crossServerPostgresTeleporter
+          case Some((pool, given Db[Future, skunk.Codec])) =>
+            Teleporter.crossServerPostgresTeleporter(pool)
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
         }
 
-      case CrossServerCommunication.Single => Teleporter.sameServerTeleporter
+      case CrossServerCommunication.Single =>
+        Teleporter.sameServerTeleporter
     }
+    given Teleporter = teleporterVal
 
     val helpCmd     = new HelpCmd(this)
     val warpCommand = Commands.warp(helpCmd.helpExecution)

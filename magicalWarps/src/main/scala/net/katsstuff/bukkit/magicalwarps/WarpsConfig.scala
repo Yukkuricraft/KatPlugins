@@ -26,6 +26,7 @@ object WarpsConfig:
       user: String,
       database: String,
       password: Option[String],
+      maxConnections: Int,
       parameters: Map[String, String]
   )
 

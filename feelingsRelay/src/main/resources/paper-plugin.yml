@@ -1,0 +1,19 @@
+name: FeelingsRelay
+main: net.katsstuff.bukkit.feelingsrelay.FeelingsRelayPlugin
+version: 1.1.2
+authors: [Katrix]
+api-version: '1.21'
+bootstrapper: net.katsstuff.bukkit.feelingsrelay.ScalaPluginBootstrap
+loader: net.katsstuff.bukkit.feelingsrelay.ScalaPluginLoader
+
+dependencies:
+  server:
+    DiscordSRV:
+      required: true
+    ChatFeelings:
+      required: true
+
+permissions:
+  feelingsrelay.admin:
+    description: Configure the plugin
+    default: op

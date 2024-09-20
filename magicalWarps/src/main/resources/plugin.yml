@@ -1,26 +1,19 @@
 name: MagicalWarps
 main: net.katsstuff.bukkit.magicalwarps.WarpsPlugin
 version: 2.2.0
-author: Katrix
-depend: [Vault]
-softdepend: [dynmap]
-commands:
-  warp:
-    description: Teleport to a warp
-    permission: magicalwarps.warps.teleport
-  warps:
-    description: See all warps, optionally for a specific group
-    permission: magicalwarps.warps.list
-  sendwarp:
-    description: Send a player to a warp
-    permission: magicalwarps.mod.send
-  magicalwarps:
-    description: Info about MagicalWarps
-    permission: magicalwarps.info
-  callback:
-    description: Internal commanhd
-  page:
-    description: Mostly internal command
+authors: [Katrix]
+api-version: '1.21'
+bootstrapper: net.katsstuff.bukkit.feelingsrelay.ScalaPluginBootstrap
+loader: net.katsstuff.bukkit.feelingsrelay.ScalaPluginLoader
+
+dependencies:
+  server:
+    Vault:
+      required: true
+    dynmap:
+      required: false
+      load: BEFORE
+
 permissions:
   magicalwarps.user:
     description: Gives access to normal user permissions
@@ -78,13 +71,3 @@ permissions:
   magicalwarps.mod.reload:
     description: Reloads the config and storage of MagicalWarps
     default: op
-
-libraries:
-  - org.scala-lang:scala3-library_3:3.3.1
-  - org.typelevel:cats-core_3:2.9.0
-  - io.circe:circe-core_3:0.14.5
-  - io.circe:circe-parser_3:0.14.5
-  - net.katsstuff:dataprism-skunk_3:0.0.0+49-74aab485-SNAPSHOT
-  - net.katsstuff:perspective-derivation_3:0.2.0+17-d7d68444-SNAPSHOT
-  - org.tpolecat:skunk-core_3:0.6.3
-  - org.tpolecat:skunk-circe_3:0.6.3

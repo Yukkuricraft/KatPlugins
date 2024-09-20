@@ -1,27 +1,36 @@
-package net.katsstuff.bukkit.homesweethome;
+package net.katsstuff.bukkit.rider;
 
 import io.papermc.paper.plugin.loader.PluginClasspathBuilder;
 import io.papermc.paper.plugin.loader.PluginLoader;
 import io.papermc.paper.plugin.loader.library.impl.JarLibrary;
 import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.Exclusion;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Map;
-
 @SuppressWarnings({"UnstableApiUsage", "unchecked", "ConstantValue"})
-public class HomeLoader implements PluginLoader {
+public class ScalaPluginLoader implements PluginLoader {
+
+    private final String scalaVersion;
+    private final Collection<Map<String, Object>> libraryDependencies;
+    private final Collection<String> jarInJarFiles;
+
+    public ScalaPluginLoader() {
+        this.scalaVersion = net.katsstuff.bukkit.rider.BuildInfo.scalaVersion;
+        this.libraryDependencies = net.katsstuff.bukkit.rider.BuildInfo.libraryDependencies;
+        this.jarInJarFiles = net.katsstuff.bukkit.rider.BuildInfo.jarInJarFiles;
+    }
 
     private String parseName(String rawName, Map<String, String> map) {
-        var scalaVersion = net.katsstuff.bukkit.homesweethome.BuildInfo.scalaVersion;
         var type = map.get("type");
         var prefix = map.get("prefix");
         if (prefix != null && !prefix.isEmpty()) {
@@ -48,7 +57,7 @@ public class HomeLoader implements PluginLoader {
             case null -> rawName;
             case "binary" -> rawName + prefix + binaryVersion + suffix;
             case "constant", "patch", "full", "for3use2_13", "for2_13use3" ->
-                    throw new IllegalStateException("Unsupported CrossVersion");
+                throw new IllegalStateException("Unsupported CrossVersion");
             default -> throw new IllegalStateException("Unknown binary version");
         };
     }
@@ -60,9 +69,13 @@ public class HomeLoader implements PluginLoader {
         var configurations = (List<String>) map.get("configurations");
         var crossVersion = (Map<String, String>) map.get("crossVersion");
 
-        if (!artifact.equals("*")) throw new IllegalStateException("Tried to exclude specific artifact. Not possible");
-        if (configurations.size() > 1)
-            throw new IllegalStateException("Tried to exclude artifact with multiple configurations. Not possible");
+        if (!artifact.equals("*")) {
+            throw new IllegalStateException("Tried to exclude specific artifact. Not possible");
+        }
+        if (configurations.size() > 1) {
+            throw new IllegalStateException(
+                "Tried to exclude artifact with multiple configurations. Not possible");
+        }
 
         var configuration = configurations.isEmpty() ? "" : configurations.getFirst();
         return new Exclusion(organization, parseName(name, crossVersion), configuration, "jar");
@@ -78,7 +91,8 @@ public class HomeLoader implements PluginLoader {
 
         var exclusions = rawExclusions.stream().map(this::parseExclusion).toList();
 
-        var artifact = new DefaultArtifact(organization, parseName(name, crossVersion), configurations, "jar", revision);
+        var artifact = new DefaultArtifact(organization, parseName(name, crossVersion),
+            configurations, "jar", revision);
 
         return new Dependency(artifact, null).setExclusions(exclusions);
     }
@@ -87,40 +101,42 @@ public class HomeLoader implements PluginLoader {
     public void classloader(@NotNull PluginClasspathBuilder classpathBuilder) {
         var dataDir = classpathBuilder.getContext().getDataDirectory();
         var pluginSource = classpathBuilder.getContext().getPluginSource();
-        var destination = dataDir.resolve("libraries").resolve("Katlib.jar");
+        
+        for (String jarInJarFile : jarInJarFiles) {
+            var destination = dataDir.resolve("libraries").resolve(jarInJarFile);
 
-        try(var filesystem = FileSystems.newFileSystem(pluginSource)) {
-            Files.createDirectories(destination.getParent());
-            Files.copy(filesystem.getPath("Katlib.jar"), destination, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            try (var filesystem = FileSystems.newFileSystem(pluginSource)) {
+                Files.createDirectories(destination.getParent());
+                Files.copy(filesystem.getPath(jarInJarFile), destination,
+                    StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            classpathBuilder.addLibrary(new JarLibrary(destination));
         }
-
-        classpathBuilder.addLibrary(new JarLibrary(destination));
 
         var resolver = new MavenLibraryResolver();
         resolver.addRepository(
-                new RemoteRepository.Builder(
-                        "central",
-                        "default",
-                        "https://repo.maven.apache.org/maven2"
-                ).build()
+            new RemoteRepository.Builder(
+                "central",
+                "default",
+                "https://repo.maven.apache.org/maven2"
+            ).build()
         );
         resolver.addRepository(
-                new RemoteRepository.Builder(
-                        "sonatype-snapshots",
-                        "default",
-                        "https://oss.sonatype.org/content/repositories/snapshots"
-                ).build()
+            new RemoteRepository.Builder(
+                "sonatype-snapshots",
+                "default",
+                "https://oss.sonatype.org/content/repositories/snapshots"
+            ).build()
         );
 
-        for (Map<String, Object> libraryDependency : net.katsstuff.bukkit.homesweethome.BuildInfo.libraryDependencies) {
+        for (Map<String, Object> libraryDependency : libraryDependencies) {
             var dep = parseDep(libraryDependency);
             resolver.addDependency(dep);
         }
-        resolver.addDependency(new Dependency(new DefaultArtifact("org.typelevel:cats-core_3:2.9.0"), null));
-        resolver.addDependency(new Dependency(new DefaultArtifact("info.debatty:java-string-similarity:2.0.0"), null));
-        
+
         classpathBuilder.addLibrary(resolver);
     }
 }

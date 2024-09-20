@@ -29,15 +29,17 @@ lazy val libraryExclusions = Seq(
   ExclusionRule("io.circe", "circe-parser_3")
 )
 
+lazy val katLibPaperDeps = Seq(
+  "org.typelevel" %% "cats-core"              % "2.9.0",
+  "info.debatty"   % "java-string-similarity" % "2.0.0"
+)
+
 lazy val katLib = project
   .settings(
     commonSettings,
     version                                  := "4.0.0-SNAPSHOT",
     libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT",
-    libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core"              % "2.9.0",
-      "info.debatty"   % "java-string-similarity" % "2.0.0"
-    )
+    libraryDependencies ++= katLibPaperDeps
   )
 
 lazy val homeSweetHome = project
@@ -58,6 +60,7 @@ lazy val homeSweetHome = project
     libraryDependencies += paperDep("net.katsstuff" %% "dataprism-skunk" % "0.1.0"),
     libraryDependencies += paperDep("net.katsstuff" %% "perspective-derivation" % "0.3.0"),
     libraryDependencies += paperDep("org.tpolecat" %% "skunk-circe" % "0.6.3"),
+    libraryDependencies ++= katLibPaperDeps.map(paperDep),
     buildInfoPackage := "net.katsstuff.bukkit.homesweethome"
   )
 
@@ -106,9 +109,10 @@ lazy val feelingsRelay = project
     resolvers += "Scarsz-Nexus" at "https://nexus.scarsz.me/content/groups/public",
     resolvers += "m2-dv8tion" at "https://m2.dv8tion.net/releases",
     libraryDependencies += "io.papermc.paper" % "paper-api"  % "1.21-R0.1-SNAPSHOT" % Provided,
-    libraryDependencies += "com.discordsrv"   % "discordsrv" % "1.27.0"             % Provided,
+    libraryDependencies += "com.discordsrv"   % "discordsrv" % "1.28.0"             % Provided,
     libraryDependencies += paperDep("io.circe" %% "circe-core" % "0.14.5"),
     libraryDependencies += paperDep("io.circe" %% "circe-parser" % "0.14.5"),
     libraryDependencies += paperDep("io.circe" %% "circe-yaml" % "0.15.0-RC1" exclude ("org.yaml", "snakeyaml")),
-    libraryDependencies += paperDep("net.katsstuff" %% "perspective-derivation" % "0.3.0")
+    libraryDependencies += paperDep("net.katsstuff" %% "perspective-derivation" % "0.3.0"),
+    buildInfoPackage := "net.katsstuff.bukkit.feelingsrelay"
   )

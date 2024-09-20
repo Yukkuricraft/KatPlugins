@@ -45,7 +45,7 @@ case class SimplePagination(
     extends PaginationService:
 
   override def sendTo(source: CommandSender): Unit = if (content.nonEmpty) {
-    val paddingFiller = Text(Seq.fill(10)(padding): _*)
+    val paddingFiller = Text(Seq.fill(10)(padding)*)
 
     def createNextButton(uuid: UUID, pageNum: Int, pageEnd: Int): Text =
       if pageNum == pageEnd - 1 then Text.Empty
@@ -81,9 +81,9 @@ case class SimplePagination(
         val extraPaddingBottom = Seq.fill((titleLength - bottomLength) / 2)(padding)
         val extraPaddingTop    = Seq.fill((bottomLength - titleLength) / 2)(padding)
 
-        val top = Text((paddingFiller +: extraPaddingTop) ++ (usedTitle +: extraPaddingTop :+ paddingFiller): _*)
+        val top = Text((paddingFiller +: extraPaddingTop) ++ (usedTitle +: extraPaddingTop :+ paddingFiller)*)
         val bottom =
-          Text((paddingFiller +: extraPaddingBottom) ++ (bottomText +: extraPaddingBottom :+ paddingFiller): _*)
+          Text((paddingFiller +: extraPaddingBottom) ++ (bottomText +: extraPaddingBottom :+ paddingFiller)*)
 
         val texts =
           (Seq(top, header.getOrElse(Text.Empty)) ++ page ++ Seq(footer.getOrElse(Text.Empty), bottom))

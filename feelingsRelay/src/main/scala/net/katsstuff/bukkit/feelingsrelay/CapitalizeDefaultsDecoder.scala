@@ -10,7 +10,7 @@ import perspective.derivation.*
 trait CapitalizeDefaultsDecoder[A] extends Decoder[A]
 object CapitalizeDefaultsDecoder:
 
-  inline given derived[A](
+  given derived[A](
       using gen: HKDProductGeneric[A],
       decoders: gen.Gen[Decoder],
       defaults: GetDefault.Aux[A, gen.Gen]
@@ -46,9 +46,15 @@ object CapitalizeDefaultsDecoder:
     inline given mkDefault[A](
         using m: Mirror.ProductOf[A],
         s: ValueOf[Tuple.Size[m.MirroredElemTypes]]
-    ): GetDefault.Aux[A, [F[_]] =>> ProductK[F, m.MirroredElemTypes]] = new GetDefault[A]:
-      type Out[F[_]] = ProductK[F, m.MirroredElemTypes]
-      override def defaults: Out[Option] = getDefaults[A](s.value).asInstanceOf[Out[Option]]
+    ): GetDefault.Aux[A, [F[_]] =>> ProductK[F, m.MirroredElemTypes]] =
+      val default = getDefaults[A](s.value).asInstanceOf[ProductK[Option, m.MirroredElemTypes]]
+      new DerivedGetDefault(default)
+
+    class DerivedGetDefault[A, ElemTypes <: Tuple](default: ProductK[Option, ElemTypes])
+        extends GetDefault[A]:
+      type Out[F[_]] = ProductK[F, ElemTypes]
+      override def defaults: Out[Option] = default
+    end DerivedGetDefault
 
     private inline def getDefaults[A](size: Int): Tuple = ${ getDefaultsImpl[A]('size) }
 

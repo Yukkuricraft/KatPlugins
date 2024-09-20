@@ -2,9 +2,9 @@ name: HomeSweetHome
 main: net.katsstuff.bukkit.homesweethome.HomePlugin
 version: 3.3.0
 authors: [Katrix]
-api-version: '1.20'
-bootstrapper: net.katsstuff.bukkit.homesweethome.HomeBootstrap
-loader: net.katsstuff.bukkit.homesweethome.HomeLoader
+api-version: '1.21'
+bootstrapper: net.katsstuff.bukkit.homesweethome.ScalaPluginBootstrap
+loader: net.katsstuff.bukkit.homesweethome.ScalaPluginLoader
 
 dependencies: 
   server: 

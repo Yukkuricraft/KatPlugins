@@ -26,7 +26,7 @@ sealed trait Executions:
 
   def children: NonEmptyList[Executions]
 
-  def runExecutions: NonEmptyList[BaseRunExecution[_, _, _]]
+  def runExecutions: NonEmptyList[BaseRunExecution[?, ?, ?]]
 
 end Executions
 
@@ -57,7 +57,7 @@ def withArgCached[Args](arg: Parameter[Args])(f: Parameter[Args] => NonEmptyList
   Command.withArgCached(arg)(f)
 
 def subCommand(name: String, names: String*)(child: Executions, children: Executions*): Executions =
-  Command.subCommand(name, names: _*)(child, children: _*)
+  Command.subCommand(name, names*)(child, children*)
 
 case class AggExecutions(executions: NonEmptyList[Executions]) extends Executions:
   override def handleCommandAsync(
@@ -81,7 +81,7 @@ case class AggExecutions(executions: NonEmptyList[Executions]) extends Execution
   override def addArgFirst[Arg](parameter: Parameter[Arg]): Executions =
     AggExecutions(executions.map(_.addArgFirst(parameter)))
 
-  override lazy val runExecutions: NonEmptyList[BaseRunExecution[_, _, _]] = executions.flatMap(_.runExecutions)
+  override lazy val runExecutions: NonEmptyList[BaseRunExecution[?, ?, ?]] = executions.flatMap(_.runExecutions)
 end AggExecutions
 
 case class CachedParamExecution[A](
@@ -118,7 +118,7 @@ case class CachedParamExecution[A](
 
   override def children: NonEmptyList[Executions] = childrenFun(param)
 
-  override val runExecutions: NonEmptyList[BaseRunExecution[_, _, _]] = children.flatMap(_.runExecutions)
+  override val runExecutions: NonEmptyList[BaseRunExecution[?, ?, ?]] = children.flatMap(_.runExecutions)
 }
 
 sealed trait BaseRunExecution[AllArgs, RunArgs, Sender] extends Executions {
@@ -190,7 +190,7 @@ sealed trait BaseRunExecution[AllArgs, RunArgs, Sender] extends Executions {
 
   override def children: NonEmptyList[Executions] = NonEmptyList.one(this)
 
-  override val runExecutions: NonEmptyList[BaseRunExecution[_, _, _]] = NonEmptyList.one(this)
+  override val runExecutions: NonEmptyList[BaseRunExecution[?, ?, ?]] = NonEmptyList.one(this)
 }
 
 case class RunExecution[AllArgs, RunArgs, Sender](

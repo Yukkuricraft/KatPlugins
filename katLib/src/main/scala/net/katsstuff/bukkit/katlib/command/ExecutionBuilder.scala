@@ -40,8 +40,8 @@ def addSubCommand(name: String, names: String*)(children: ExecutionBuilder ?=> U
   val innerBuilder = new ExecutionBuilder
   children(using innerBuilder)
   outerBuilder.addExecutionToBuilder(
-    Command.subCommand(name, names: _*)(
+    Command.subCommand(name, names*)(
       innerBuilder.executions.executions.head,
-      innerBuilder.executions.executions.tail: _*
+      innerBuilder.executions.executions.tail*
     )
   )

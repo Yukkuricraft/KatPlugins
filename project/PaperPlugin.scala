@@ -77,7 +77,10 @@ object PaperPlugin extends AutoPlugin {
             }
             .toList
       },
-      scalaVersion
+      scalaVersion,
+      BuildInfoKey.map[Map[String, File], scala.collection.immutable.Seq[String]](jarInJarFiles) { case (_, map) =>
+        ("jarInJarFiles", map.keys.toList)
+      }
     ),
     jarInJarFiles := Map.empty,
     packageBin := {

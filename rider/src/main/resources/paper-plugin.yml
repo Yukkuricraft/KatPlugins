@@ -1,0 +1,13 @@
+name: Rider
+main: net.katsstuff.bukkit.rider.RiderPlugin
+version: 1.1.0
+author: Katrix
+authors: [Katrix]
+api-version: '1.21'
+bootstrapper: net.katsstuff.bukkit.rider.ScalaPluginBootstrap
+loader: net.katsstuff.bukkit.rider.ScalaPluginLoader
+
+permissions:
+  rider.ride:
+    description: Allows you to use saddles to ride entities, and make them ride you
+    default: false

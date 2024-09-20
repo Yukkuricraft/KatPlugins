@@ -126,7 +126,7 @@ object Command:
     new Command(
       Seq(name),
       if (permission.isEmpty) None else Some(permission),
-      AggExecutions(NonEmptyList.of(firstExecution, executions: _*)).flatten
+      AggExecutions(NonEmptyList.of(firstExecution, executions*)).flatten
     )
 
   def fromExecutionBuilder(name: String, permission: String = "")(executions: ExecutionBuilder ?=> Unit)(
@@ -135,12 +135,12 @@ object Command:
   ): Command =
     val builder = new ExecutionBuilder
     executions(using builder)
-    Command(name, permission)(builder.executions.executions.head, builder.executions.executions.tail: _*)
+    Command(name, permission)(builder.executions.executions.head, builder.executions.executions.tail*)
 
   def apply(permission: Option[String], names: String*)(firstExecution: Executions, executions: Executions*)(
       using ExecutionContext
   ): Command =
-    new Command(names, permission, AggExecutions(NonEmptyList.of(firstExecution, executions: _*)).flatten)
+    new Command(names, permission, AggExecutions(NonEmptyList.of(firstExecution, executions*)).flatten)
 
   def fromExecutionBuilder(permission: Option[String], names: String*)(executions: ExecutionBuilder ?=> Unit)(
       using ExecutionContext,
@@ -148,7 +148,7 @@ object Command:
   ): Command =
     val builder = new ExecutionBuilder
     executions(using builder)
-    Command(permission, names: _*)(builder.executions.executions.head, builder.executions.executions.tail: _*)
+    Command(permission, names*)(builder.executions.executions.head, builder.executions.executions.tail*)
 
   def execution[Args, Sender](
       args: Parameter[Args] = Parameters.unit,
@@ -198,5 +198,5 @@ object Command:
 
   def subCommand(name: String, names: String*)(child: Executions, children: Executions*): Executions =
     new AggExecutions(
-      NonEmptyList.of(child, children: _*).map(_.addArgFirst(Parameter.literal(NonEmptyList.of(name, names: _*))))
+      NonEmptyList.of(child, children*).map(_.addArgFirst(Parameter.literal(NonEmptyList.of(name, names*))))
     )

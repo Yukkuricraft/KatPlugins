@@ -23,11 +23,12 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.{EventHandler, Listener}
+import scala.compiletime.uninitialized
 
 class FeelingsRelayPlugin extends ScalaPlugin with Listener:
 
   implicit val plugin: FeelingsRelayPlugin                   = this
-  private var relayConfig: Map[String, DiscordMessageFormat] = _
+  private var relayConfig: Map[String, DiscordMessageFormat] = uninitialized
 
   private def feelingsRelayCommand = Command("feelingsrelay", "feelingsrelay.admin")(
     Command.subCommand("reload")(

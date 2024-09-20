@@ -71,7 +71,7 @@ class HelpCmd(plugin: ScalaPlugin):
     }
 
   private def executionUsageMatches(sender: CommandSender, filters: Seq[String])(
-      ex: BaseRunExecution[_, _, _]
+      ex: BaseRunExecution[?, ?, ?]
   ): Boolean =
     if ex.permissions.forall(sender.hasPermission) then
       val usage = ex.allArgs.usage(sender)
@@ -107,7 +107,7 @@ class HelpCmd(plugin: ScalaPlugin):
   private def buildExecutionEntry(
       sender: CommandSender,
       commandName: String,
-      executions: BaseRunExecution[_, _, _],
+      executions: BaseRunExecution[?, ?, ?],
       detail: Boolean
   ): Text =
     val usage    = executions.allArgs.usage(sender)

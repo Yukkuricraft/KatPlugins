@@ -1,0 +1,105 @@
+name: HomeSweetHome
+main: net.katsstuff.bukkit.homesweethome.HomePlugin
+version: 3.3.0
+authors: [Katrix]
+api-version: '1.20'
+bootstrapper: net.katsstuff.bukkit.homesweethome.HomeBootstrap
+loader: net.katsstuff.bukkit.homesweethome.HomeLoader
+
+dependencies: 
+  server: 
+    Vault:
+      required: true
+
+permissions:
+  homesweethome.user:
+    description: Gives access to normal user permissions
+    children:
+      homesweethome.home.tp: true
+      homesweethome.home.set: true
+      homesweethome.home.list: true
+      homesweethome.home.remove: true
+      homesweethome.home.invite: true
+      homesweethome.home.accept: true
+      homesweethome.home.goto: true
+      homesweethome.home.residents.list: true
+      homesweethome.home.residents.add: true
+      homesweethome.home.residents.remove: true
+  homesweethome.moderator:
+    description: Gives access to mod permissions
+    children:
+      homesweethome.mod.search: true
+      homesweethome.home.other.tp: true
+      homesweethome.home.other.remove: true
+      homesweethome.home.other.list: true
+      homesweethome.home.other.set: true
+      homesweethome.home.other.invite: true
+      homesweethome.home.other.residents.list: true
+      homesweethome.home.other.residents.add: true
+      homesweethome.home.other.residents.remove: true
+  homesweethome.home.tp:
+    description: Allows you to go to your homes
+    default: true
+  homesweethome.home.set:
+    description: Allows you to set your homes
+    default: true
+  homesweethome.home.list:
+    description: Allows you to list your homes
+    default: true
+  homesweethome.home.remove:
+    description: Allows you to remove your homes
+    default: true
+  homesweethome.home.invite:
+    description: Allows you to invite other players to your homes
+    default: true
+  homesweethome.home.accept:
+    description: Allows you to accept home requests
+    default: true
+  homesweethome.home.goto:
+    description: Allows you to go to other players homes
+    default: true
+  homesweethome.home.residents.list:
+    description: Allows you to see the residents of a home
+    default: true
+  homesweethome.home.residents.add:
+    description: Allows you to add residents to a home
+    default: true
+  homesweethome.home.residents.remove:
+    description: Allows you to remove residents from a home
+    default: true
+  homesweethome.home.other.tp:
+    description: Allows you to go to other's homes
+    default: op
+  homesweethome.home.other.remove:
+    description: Allows you to remove other's homes
+    default: op
+  homesweethome.home.other.list:
+    description: Allows you to list other's homes
+    default: op
+  homesweethome.home.other.set:
+    description: Allows you to set other's homes
+    default: op
+  homesweethome.home.other.invite:
+    description: Allows you to invite other players to other's homes
+    default: op
+  homesweethome.home.other.residents.list:
+    description: Allows you to see the residents of other's home
+    default: op
+  homesweethome.home.other.residents.add:
+    description: Allows you to add residents to other's homes
+    default: op
+  homesweethome.home.other.residents.remove:
+    description: Allows you to remove residents from other's homes
+    default: op
+  homesweethome.admin.reload:
+    description: Reloads config and home data
+    default: op
+  homesweethome.admin.import:
+    description: Imports home data
+    default: op
+  homesweethome.admin.export:
+    description: Exports and home data
+    default: op
+  homesweethome.mod.search:
+    description: Search for homes
+    default: op

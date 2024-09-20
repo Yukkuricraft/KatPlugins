@@ -1,0 +1,16 @@
+name: Rider
+main: net.katsstuff.bukkit.rider.RiderPlugin
+version: 1.1.0
+author: Katrix
+depend: []
+commands:
+  eject:
+    description: Remove the entity riding on you from your head
+permissions:
+  rider.ride:
+    description: Allows you to use saddles to ride entities, and make them ride you
+    default: false
+
+libraries:
+  - org.scala-lang:scala3-library_3:3.3.1
+  - org.typelevel:cats-core_3:2.9.0

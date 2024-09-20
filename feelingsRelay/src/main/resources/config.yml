@@ -1,0 +1,495 @@
+version: 1
+feelings:
+  Hug:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** gave **%receiverdisplayname%** a warm hug. Awww ❤"
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** gave **%receiverdisplayname%** a warm hug. Awww ❤"
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Slap:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%receiverdisplayname%** was slapped by **%senderdisplayname%**."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%receiverdisplayname%** was slapped by **%senderdisplayname%**."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Poke:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%receiverdisplayname%** was poked by **%senderdisplayname%**. *Anyone home?*"
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%receiverdisplayname%** was poked by **%senderdisplayname%**. *Anyone home?*"
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Highfive:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** gives **%receiverdisplayname%** a mighty highfive."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** gives **%receiverdisplayname%** a mighty highfive."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Facepalm:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** facepalms at **%receiverdisplayname%** for being dumb."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** facepalms at **%receiverdisplayname%** for being dumb."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Yell:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** yells right at **%receiverdisplayname%** from the top of their lungs."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** yells right at **%receiverdisplayname%** from the top of their lungs."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Bite:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** sinks their teeth into **%receiverdisplayname%**'s skin"
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** sinks their teeth into **%receiverdisplayname%**'s skin"
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Snuggle:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** snuggles **%receiverdisplayname%** them with hugs. Awww ❤"
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** snuggles **%receiverdisplayname%** them with hugs. Awww ❤"
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Shake:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** picks up **%receiverdisplayname%**'s body, and shakes it."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** picks up **%receiverdisplayname%**'s body, and shakes it."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Stab:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** grabs a knife and stabs **%receiverdisplayname%**."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** grabs a knife and stabs **%receiverdisplayname%**."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Kiss:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** gives **%receiverdisplayname%** a kiss. Awww ❤"
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** gives **%receiverdisplayname%** a kiss. Awww ❤"
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Punch:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** punched **%receiverdisplayname%** right in the face."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** punched **%receiverdisplayname%** right in the face."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Murder:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** just murdered **%receiverdisplayname%**. **RIP**"
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** just murdered **%receiverdisplayname%**. **RIP**"
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Boi:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** inhales at **%receiverdisplayname%**... ***BOI***"
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** inhales at **%receiverdisplayname%**... ***BOI***"
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Cry:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** leans on **%receiverdisplayname%**'s should and cries."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** leans on **%receiverdisplayname%**'s should and cries."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Dab:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** freshly dabs on **%receiverdisplayname%**... Got'em."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** freshly dabs on **%receiverdisplayname%**... Got'em."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Lick:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%receiverdisplayname%** got licked by **%senderdisplayname%**. Gross."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%receiverdisplayname%** got licked by **%senderdisplayname%**. Gross."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Pat:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** gently pats **%receiverdisplayname%**'s head for being good."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** gently pats **%receiverdisplayname%**'s head for being good."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false
+
+  Stalk:
+    Enabled: true
+    Webhook:
+      Enable: false
+      AvatarUrl: "%botavatarurl%"
+      Name: "%botname%"
+    Content: "**%senderdisplayname%** stalks **%receiverdisplayname%** from a nearby tree."
+    Embed:
+      Enabled: false
+      Color: "#000000"
+      Author:
+        ImageUrl: "%senderembedavatarurl%"
+        Name: "**%senderdisplayname%** stalks **%receiverdisplayname%** from a nearby tree."
+        Url: ""
+      ThumbnailUrl: ""
+      Title:
+        Text: ""
+        Url: ""
+      Description: ""
+      Fields: [ ]
+      ImageUrl: ""
+      Footer:
+        Text: ""
+        IconUrl: ""
+      Timestamp: false

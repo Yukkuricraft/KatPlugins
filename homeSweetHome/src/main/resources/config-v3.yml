@@ -1,0 +1,73 @@
+# Don't touch this
+version: 3
+
+# Server name used to teleporting users between servers
+serverName: global
+
+home:
+
+  #The default limit to how many homes someone can have
+  homeLimit: 3
+
+  #The default limit to how many residents a home can have
+  residentLimit: 2
+
+  #The amount of time in seconds before an invite or request times out
+  timeout: 360
+
+storage:
+
+  # Type of storage that will be used.
+  #
+  # - Postgres
+  #   Uses a postgres database to store everything. Note, looking up homes for
+  #   offline players might be a bit slower.
+  #
+  # - MultiFile
+  #   Uses one file per user to store homes and residents. Note, looking up
+  #   homes for offline players might be a bit slower. Some operations like
+  #   looking up homes in a radius might be quite a bit slower.
+  #
+  # - SingleFile
+  #   Uses a single file for all homes, which is loaded into memory when the
+  #   server starts. Takes a lot of memory, and not optimized for many homes.
+  #   Most operations are instant. Looking up homes in a radius might lag the
+  #   server a bit if there are many homes.
+  type: Postgres
+
+  # Postgres configuration
+  postgres:
+    # If Postgres should be initialized
+    use: false
+    
+    # DB Host
+    host: 'localhost'
+    
+    # DB Port 
+    port: 5432
+    
+    # Username for the DB
+    user: ''
+
+    # Password for the DB
+    password: ''
+    
+    # Database to use
+    database: ''
+    
+    # Max amount of connections to the DB at once
+    maxConnections: 100
+
+    # Extra parameters for Postgres
+    parameters: {}
+
+# How multiple servers should communicate with each other to make HSH work 
+# seamlessly across servers.
+#
+# - Postgres
+#   Uses postgres to manage communication.
+#
+# - Single
+#   No multi-server communication. If a home does not exist on the current 
+#   server, the player has to teleport to the server it exists on manually.
+crossServerCommunication: Postgres

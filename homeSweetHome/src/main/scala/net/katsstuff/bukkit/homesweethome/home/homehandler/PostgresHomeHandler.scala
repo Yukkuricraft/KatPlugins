@@ -20,8 +20,9 @@ import net.katsstuff.bukkit.homesweethome.home.Home
 import net.katsstuff.bukkit.homesweethome.home.homehandler.PostgresHomeHandler.{InviteK, OnlinePlayerGlobalK, RequestK}
 import net.katsstuff.bukkit.homesweethome.home.storage.HomeStorage
 import net.katsstuff.bukkit.homesweethome.lib.LibPerm
-import net.katsstuff.bukkit.homesweethome.{CachedRemoteData, GlobalPlayer, HSHConfig, HomePlugin, NestedMap}
-import net.katsstuff.bukkit.katlib.ScalaPlugin
+import net.katsstuff.bukkit.homesweethome.{HSHConfig, HomePlugin, NestedMap}
+import net.katsstuff.bukkit.katlib.db.PostgresCached
+import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import net.milkbowl.vault.chat.Chat
 import org.bukkit.event.player.{PlayerJoinEvent, PlayerQuitEvent}
@@ -43,7 +44,7 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
   private def chat: Chat = Bukkit.getServicesManager.load(classOf[Chat])
 
   private val globalOnlinePlayersCached =
-    CachedRemoteData.postgresNotify[Seq[GlobalPlayer]](
+    PostgresCached.postgresNotify[Seq[GlobalPlayer]](
       () => FutureOrNow.fromFuture(Select(Query.from(OnlinePlayerGlobalK.table)).run.map(_.map(_.asGlobalPlayer))),
       60.seconds,
       "HomeSweetHome.GlobalPlayersChange",
@@ -75,7 +76,7 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
       () => mutable.Map()
     )
 
-  private val requests = CachedRemoteData.postgresNotify[NestedMap[UUID, UUID, Home]](
+  private val requests = PostgresCached.postgresNotify[NestedMap[UUID, UUID, Home]](
     () => {
       Delete
         .from(RequestK.table)
@@ -108,7 +109,7 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
     )
   )
 
-  private val invites = CachedRemoteData.postgresNotify[NestedMap[UUID, UUID, Home]](
+  private val invites = PostgresCached.postgresNotify[NestedMap[UUID, UUID, Home]](
     () => {
       Delete
         .from(InviteK.table)

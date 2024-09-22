@@ -1,6 +1,5 @@
-package net.katsstuff.bukkit.magicalwarps
+package net.katsstuff.bukkit.katlib
 
-import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.text.*
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer
 import org.bukkit.entity.Player

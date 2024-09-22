@@ -1,7 +1,17 @@
-import sbtbuildinfo.{BuildInfoOption, JavaStaticFieldsRenderer, TypeExpression}
+import sbtbuildinfo.{BuildInfoOption, BuildInfoResult, JavaStaticFieldsRenderer, TypeExpression}
 
 class FallibleJavaStaticFieldsRenderer(options: Seq[BuildInfoOption], pkg: String, cl: String)
     extends JavaStaticFieldsRenderer(options: Seq[BuildInfoOption], pkg: String, cl: String) {
+
+  override def renderKeys(buildInfoResults: Seq[BuildInfoResult]): Seq[String] =
+    header ++
+      buildInfoResults.flatMap(line) ++
+      Seq(toStringLines(buildInfoResults)) ++
+      toMapLines(buildInfoResults) ++
+      Seq(buildUrlLines) ++
+      buildJsonLines ++
+      toJsonLines ++
+      footer
 
   override protected def getJavaType(typeExpr: TypeExpression): Option[String] = {
     def tpeToReturnType(tpe: TypeExpression): Option[String] =
@@ -51,5 +61,12 @@ class FallibleJavaStaticFieldsRenderer(options: Seq[BuildInfoOption], pkg: Strin
         case _ => None
       }
     tpeToReturnType(typeExpr)
+  }
+
+  override protected def quote(v: Any): String = v match {
+    case (k, _v)                => s"java.util.Map.entry(${quote(k)}, ${quote(_v)})"
+    case mp: Map[_, _]          => s"java.util.Map.ofEntries(${mp.map(quote).mkString(", ")})"
+    case seq: collection.Seq[_] => s"java.util.List.of(${seq.map(quote).mkString(", ")})"
+    case _                      => super.quote(v)
   }
 }

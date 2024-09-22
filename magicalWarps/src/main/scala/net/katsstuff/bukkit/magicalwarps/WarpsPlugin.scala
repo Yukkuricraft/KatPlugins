@@ -17,15 +17,17 @@ import fs2.io.net.Network
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import natchez.Trace
 import natchez.Trace.Implicits.noop
-import net.katsstuff.bukkit.katlib.ScalaPlugin
+import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.command.HelpCmd
+import net.katsstuff.bukkit.katlib.db.{CrossServerPostgresTeleporter, DbUpdates, ScalaDbPlugin}
+import net.katsstuff.bukkit.katlib.util.Teleporter
 import net.katsstuff.bukkit.magicalwarps.WarpsConfig.{CrossServerCommunication, StorageType}
 import net.katsstuff.bukkit.magicalwarps.cmd.*
 import net.katsstuff.bukkit.magicalwarps.warp.storage.{SingleFileWarpStorage, WarpStorage}
 import org.bukkit.Bukkit
 import skunk.Session
 
-class WarpsPlugin extends ScalaPlugin {
+class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
 
   override val commandMapDefaultFallbackPrefix: String = "magicalwarps"
 
@@ -39,9 +41,6 @@ class WarpsPlugin extends ScalaPlugin {
 
   def exportImportPath: Path = dataFolder.toPath.resolve("export.json")
 
-  private var _dispatcher: Dispatcher[IO] = uninitialized
-  def dispatcher: Dispatcher[IO]          = _dispatcher
-
   private var dbObjs: Option[(Resource[IO, Session[IO]], Db[Future, skunk.Codec])] = uninitialized
 
   def loadConfig(): Try[WarpsConfig] =
@@ -54,10 +53,6 @@ class WarpsPlugin extends ScalaPlugin {
         Failure(e)
 
   def makeStorage(): WarpStorage =
-    val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()(using IORuntime.global)
-    this._dispatcher = dispatcher
-
-    addDisableAction(closeDispatcher.unsafeRunSync()(IORuntime.global))
 
     dbObjs =
       if !warpsConfig.storage.postgres.use then None
@@ -67,7 +62,7 @@ class WarpsPlugin extends ScalaPlugin {
           given Network[IO] = Network.forIO
 
           dispatcher.unsafeRunSync(
-            DbUpdates.updateIfNeeded()(
+            DbUpdates.updateIfNeeded(presentDbVersion = 1)(
               using SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,
@@ -147,12 +142,12 @@ class WarpsPlugin extends ScalaPlugin {
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
-            Teleporter.crossServerPostgresTeleporter(pool)
+            CrossServerPostgresTeleporter(pool, warpsConfig.serverName)
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
         }
 
       case CrossServerCommunication.Single =>
-        Teleporter.sameServerTeleporter
+        Teleporter.SameServerTeleporter(warpsConfig.serverName)
     }
     given Teleporter = teleporterVal
     

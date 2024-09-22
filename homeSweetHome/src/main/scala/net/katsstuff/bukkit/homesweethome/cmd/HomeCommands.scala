@@ -1,13 +1,11 @@
 package net.katsstuff.bukkit.homesweethome.cmd
 
 import java.util.{Locale, UUID}
-
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-
 import cats.data.{EitherT, NonEmptyList, StateT}
 import cats.syntax.all.*
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes
@@ -16,11 +14,11 @@ import net.katsstuff.bukkit.homesweethome.*
 import net.katsstuff.bukkit.homesweethome.home.Home
 import net.katsstuff.bukkit.homesweethome.home.homehandler.HomeHandler
 import net.katsstuff.bukkit.homesweethome.lib.LibPerm
-import net.katsstuff.bukkit.katlib.ScalaPlugin
+import net.katsstuff.bukkit.katlib.{BungeeChannel, GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.command.*
 import net.katsstuff.bukkit.katlib.service.PaginationService
 import net.katsstuff.bukkit.katlib.text.*
-import net.katsstuff.bukkit.katlib.util.FutureOrNow
+import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.event.{ClickCallback, ClickEvent}

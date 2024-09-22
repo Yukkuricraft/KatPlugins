@@ -4,11 +4,9 @@ import java.io.{ByteArrayInputStream, DataInputStream}
 import java.nio.file.{Files, Path}
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
-
 import cats.syntax.all.*
 import com.google.common.cache.CacheBuilder
 import io.circe.*
@@ -16,7 +14,8 @@ import io.circe.syntax.*
 import net.katsstuff.bukkit.homesweethome.home.storage.HomeStorage
 import net.katsstuff.bukkit.homesweethome.home.{Home, Resident}
 import net.katsstuff.bukkit.homesweethome.lib.LibPerm
-import net.katsstuff.bukkit.homesweethome.{GlobalPlayer, HSHConfig, NestedMap}
+import net.katsstuff.bukkit.homesweethome.{HSHConfig, NestedMap}
+import net.katsstuff.bukkit.katlib.GlobalPlayer
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import net.milkbowl.vault.chat.Chat
 import org.bukkit.entity.Player

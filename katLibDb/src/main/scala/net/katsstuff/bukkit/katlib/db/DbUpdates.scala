@@ -1,4 +1,4 @@
-package net.katsstuff.bukkit.homesweethome
+package net.katsstuff.bukkit.katlib.db
 
 import java.io.BufferedReader
 
@@ -13,10 +13,13 @@ import skunk.Codec
 
 object DbUpdates {
 
-  private val currentDbVersion: Int = 1
+  // Solution Play framework uses. Not a fan, but it's simple
+  def splitStringIntoSqlStatements(str: String): Seq[String] =
+    str.split("(?<!;);(?!;)").view.map(_.trim.replace(";;", ";")).filter(_ != "").toSeq
 
   private def runDbUpdatesFrom(
-      previousVersion: Int
+      previousVersion: Int,
+      presentDbVersion: Int
   )(using db: TransactionalDb[IO, Codec], plugin: ScalaPlugin): IO[Unit] =
     val versionToWrite = previousVersion + 1
     Resource
@@ -29,22 +32,20 @@ object DbUpdates {
       .flatMap {
         case Some(sqlMigration) =>
           val runMigration = db.transaction { (tx: TransactionDb[IO, Codec]) ?=>
-            sqlMigration
-              .split(";")
-              .toSeq
+            splitStringIntoSqlStatements(sqlMigration)
               .map(s => SqlStr.const(s))
               .traverse_(tx.run)
           }
 
-          if versionToWrite < currentDbVersion then runMigration *> runDbUpdatesFrom(versionToWrite)
+          if versionToWrite < presentDbVersion then runMigration *> runDbUpdatesFrom(versionToWrite, presentDbVersion)
           else runMigration
         case None => IO.unit
       }
 
-  private def writeCurrentDbVersion()(using db: Db[IO, Codec]): IO[Int] =
-    db.run(sql"UPDATE version SET version = (${currentDbVersion.toShort.asArg(int2.codec)})")
+  private def writeCurrentDbVersion(presentDbVersion: Int)(using db: Db[IO, Codec]): IO[Int] =
+    db.run(sql"UPDATE version SET version = (${presentDbVersion.toShort.asArg(int2.codec)})")
 
-  def updateIfNeeded()(
+  def updateIfNeeded(presentDbVersion: Int)(
       using db: TransactionalDb[IO, Codec],
       plugin: ScalaPlugin
   ): IO[Unit] =
@@ -54,9 +55,9 @@ object DbUpdates {
       _ <- version match
         case None =>
           for
-            _ <- runDbUpdatesFrom(0)
-            _ <- db.run(sql"INSERT INTO version VALUES (${currentDbVersion.toShort.asArg(int2.codec)})")
+            _ <- runDbUpdatesFrom(0, presentDbVersion)
+            _ <- db.run(sql"INSERT INTO version VALUES (${presentDbVersion.toShort.asArg(int2.codec)})")
           yield ()
-        case Some(v) => runDbUpdatesFrom(v).flatMap(_ => writeCurrentDbVersion())
+        case Some(v) => runDbUpdatesFrom(v, presentDbVersion).flatMap(_ => writeCurrentDbVersion(presentDbVersion))
     yield ()
 }

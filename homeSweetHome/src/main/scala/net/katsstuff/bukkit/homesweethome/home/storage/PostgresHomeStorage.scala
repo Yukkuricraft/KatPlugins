@@ -1,18 +1,16 @@
 package net.katsstuff.bukkit.homesweethome.home.storage
 
 import java.util.UUID
-
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
-
 import cats.data.NonEmptyList
 import dataprism.skunk.platform.PostgresSkunkPlatform
 import dataprism.skunk.platform.PostgresSkunkPlatform.Api.*
 import dataprism.skunk.sql.SkunkTypes.*
 import dataprism.sql.*
 import net.katsstuff.bukkit.homesweethome.home.{Home, HomeK, Resident, ResidentK}
-import net.katsstuff.bukkit.homesweethome.{CachedRemoteData, HSHConfig, HomePlugin}
-import net.katsstuff.bukkit.katlib.util.FutureOrNow
+import net.katsstuff.bukkit.homesweethome.{HSHConfig, HomePlugin}
+import net.katsstuff.bukkit.katlib.util.{CachedRemoteData, FutureOrNow}
 import org.bukkit.Location
 import org.bukkit.event.EventHandler
 import org.bukkit.event.player.{PlayerJoinEvent, PlayerQuitEvent}

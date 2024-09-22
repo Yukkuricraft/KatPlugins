@@ -2,20 +2,18 @@ package net.katsstuff.bukkit.homesweethome.home.storage
 
 import java.nio.file.{Files, Path, Paths}
 import java.util.UUID
-
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.jdk.StreamConverters.*
 import scala.util.Try
-
 import cats.syntax.all.*
 import io.circe.*
 import io.circe.syntax.*
 import net.katsstuff.bukkit.homesweethome.home.{Home, Resident}
-import net.katsstuff.bukkit.homesweethome.{CachedRemoteData, HSHConfig, HomePlugin}
+import net.katsstuff.bukkit.homesweethome.{HSHConfig, HomePlugin}
 import net.katsstuff.bukkit.katlib.ScalaPlugin
-import net.katsstuff.bukkit.katlib.util.FutureOrNow
+import net.katsstuff.bukkit.katlib.util.{CachedRemoteData, FutureOrNow}
 import org.bukkit.Location
 import org.bukkit.event.EventHandler
 import org.bukkit.event.player.{PlayerJoinEvent, PlayerQuitEvent}

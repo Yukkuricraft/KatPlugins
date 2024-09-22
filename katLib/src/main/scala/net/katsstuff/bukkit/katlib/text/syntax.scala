@@ -13,7 +13,7 @@ object Text {
   type ApplyApplicable = advanture.ComponentBuilderApplicable | String | Byte | Short | Int | Long | Float | Double
   def apply(args: ApplyApplicable*): Text =
     advanture.LinearComponents.linear(
-      args.map {
+      (Empty +: args).map {
         case v: String                                   => advanture.Component.text(v)
         case v: Byte                                     => advanture.Component.text(v)
         case v: Short                                    => advanture.Component.text(v)

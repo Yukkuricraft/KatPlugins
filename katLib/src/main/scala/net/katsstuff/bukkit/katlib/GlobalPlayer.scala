@@ -1,10 +1,10 @@
-package net.katsstuff.bukkit.homesweethome
+package net.katsstuff.bukkit.katlib
 
-import java.util.UUID
-import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.text.*
 import org.bukkit.entity.Player
 import org.bukkit.{Bukkit, OfflinePlayer}
+
+import java.util.UUID
 
 enum GlobalPlayer:
   case OnThisServer(player: Player)

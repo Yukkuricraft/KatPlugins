@@ -17,7 +17,7 @@ import org.eclipse.aether.graph.Exclusion;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings({"UnstableApiUsage", "unchecked", "ConstantValue"})
+@SuppressWarnings({"UnstableApiUsage", "unchecked"})
 public class ScalaPluginLoader implements PluginLoader {
 
     private final String scalaVersion;

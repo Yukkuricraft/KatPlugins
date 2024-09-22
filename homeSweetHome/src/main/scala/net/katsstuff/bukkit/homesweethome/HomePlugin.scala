@@ -18,12 +18,14 @@ import net.katsstuff.bukkit.homesweethome.HSHConfig.{CrossServerCommunication, S
 import net.katsstuff.bukkit.homesweethome.cmd.*
 import net.katsstuff.bukkit.homesweethome.home.homehandler.{HomeHandler, PostgresHomeHandler, SingleServerHomeHandler}
 import net.katsstuff.bukkit.homesweethome.home.storage.{HomeStorage, MultiFileHomeStorage, PostgresHomeStorage, SingleFileHomeStorage}
-import net.katsstuff.bukkit.katlib.ScalaPlugin
+import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.command.{CommandRegistrationType, HelpCmd}
+import net.katsstuff.bukkit.katlib.db.{CrossServerPostgresTeleporter, DbUpdates, ScalaDbPlugin}
+import net.katsstuff.bukkit.katlib.util.Teleporter
 import org.bukkit.Bukkit
 import skunk.Session
 
-class HomePlugin extends ScalaPlugin:
+class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
 
   override val commandMapDefaultFallbackPrefix: String = "homesweethome"
 
@@ -35,9 +37,6 @@ class HomePlugin extends ScalaPlugin:
   given HSHConfig = hshConfig
 
   def exportImportPath: Path = dataFolder.toPath.resolve("export.json")
-
-  private var _dispatcher: Dispatcher[IO] = uninitialized
-  def dispatcher: Dispatcher[IO]          = _dispatcher
 
   private var dbObjs: Option[(Resource[IO, Session[IO]], Db[Future, skunk.Codec])] = uninitialized
 
@@ -51,11 +50,6 @@ class HomePlugin extends ScalaPlugin:
         Failure(e)
 
   def makeStorage(): HomeStorage =
-    val (dispatcher, closeDispatcher) = Dispatcher.parallel[IO].allocated.unsafeRunSync()(using IORuntime.global)
-    this._dispatcher = dispatcher
-
-    addDisableAction(closeDispatcher.unsafeRunSync()(IORuntime.global))
-
     dbObjs =
       if !hshConfig.storage.postgres.use then None
       else
@@ -64,7 +58,7 @@ class HomePlugin extends ScalaPlugin:
           given Network[IO] = Network.forIO
 
           dispatcher.unsafeRunSync(
-            DbUpdates.updateIfNeeded()(
+            DbUpdates.updateIfNeeded(presentDbVersion = 1)(
               using SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,
@@ -169,12 +163,12 @@ class HomePlugin extends ScalaPlugin:
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
-            Teleporter.crossServerPostgresTeleporter(pool)
+            CrossServerPostgresTeleporter(pool, hshConfig.serverName)
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
         }
 
       case CrossServerCommunication.Single =>
-        Teleporter.sameServerTeleporter
+        Teleporter.SameServerTeleporter(hshConfig.serverName)
     }
     given Teleporter = teleporterVal
     

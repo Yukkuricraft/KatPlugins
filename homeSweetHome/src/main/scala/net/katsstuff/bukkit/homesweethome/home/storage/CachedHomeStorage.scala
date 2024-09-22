@@ -4,15 +4,13 @@ import java.nio.file.Path
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
-
 import com.google.common.cache.CacheBuilder
 import net.katsstuff.bukkit.homesweethome.home.{Home, HomeK, Resident}
-import net.katsstuff.bukkit.homesweethome.{CachedRemoteData, HSHConfig, HomePlugin, NestedMap}
-import net.katsstuff.bukkit.katlib.util.FutureOrNow
+import net.katsstuff.bukkit.homesweethome.{HSHConfig, HomePlugin, NestedMap}
+import net.katsstuff.bukkit.katlib.util.{CachedRemoteData, FutureOrNow}
 import org.bukkit.event.player.{PlayerJoinEvent, PlayerQuitEvent}
 import org.bukkit.event.{EventHandler, Listener}
 import org.bukkit.{Bukkit, Location, OfflinePlayer}

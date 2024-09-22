@@ -2,21 +2,19 @@ package net.katsstuff.bukkit.magicalwarps.cmd
 
 import java.text.NumberFormat
 import java.util.UUID
-
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-
 import cats.data.NonEmptyList
 import cats.syntax.all.*
-import net.katsstuff.bukkit.katlib.ScalaPlugin
+import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.command.*
 import net.katsstuff.bukkit.katlib.service.PaginationService
 import net.katsstuff.bukkit.katlib.text.*
-import net.katsstuff.bukkit.katlib.util.FutureOrNow
+import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
 import net.katsstuff.bukkit.magicalwarps.lib.LibPerm
 import net.katsstuff.bukkit.magicalwarps.warp.Warp
 import net.katsstuff.bukkit.magicalwarps.warp.storage.WarpStorage
-import net.katsstuff.bukkit.magicalwarps.{GlobalPlayer, Teleporter, WarpsConfig, WarpsPlugin}
+import net.katsstuff.bukkit.magicalwarps.{WarpsConfig, WarpsPlugin}
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.command.CommandSender

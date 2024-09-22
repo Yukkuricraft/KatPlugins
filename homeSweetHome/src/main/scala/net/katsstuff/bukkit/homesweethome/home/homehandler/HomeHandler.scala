@@ -2,16 +2,14 @@ package net.katsstuff.bukkit.homesweethome.home.homehandler
 
 import java.nio.file.Files
 import java.util.UUID
-
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
-
 import cats.syntax.all.*
 import io.circe.*
 import io.circe.syntax.*
-import net.katsstuff.bukkit.homesweethome.GlobalPlayer
 import net.katsstuff.bukkit.homesweethome.home.storage.HomeStorage
 import net.katsstuff.bukkit.homesweethome.home.{Home, Resident}
+import net.katsstuff.bukkit.katlib.GlobalPlayer
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import org.bukkit.{Bukkit, OfflinePlayer, World}
 

@@ -2,15 +2,17 @@ package net.katsstuff.bukkit.magicalwarps.cmd
 
 import java.text.NumberFormat
 import java.util.UUID
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+
 import cats.data.NonEmptyList
 import cats.syntax.all.*
-import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.command.*
 import net.katsstuff.bukkit.katlib.service.PaginationService
 import net.katsstuff.bukkit.katlib.text.*
 import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
+import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.magicalwarps.lib.LibPerm
 import net.katsstuff.bukkit.magicalwarps.warp.Warp
 import net.katsstuff.bukkit.magicalwarps.warp.storage.WarpStorage
@@ -141,14 +143,16 @@ object Commands {
         LibPerm.Set,
         description = _ => Some(t"Set a new warp")
       ) { case (player, warpName ~ optGroup) =>
-        warpStorage
-          .setWarp(
-            Warp.fromLocation(warpName, player.getLocation).copy(groups = optGroup.toSeq)
-          )
-          .map { _ =>
-            player.sendMessage(t"${Green}Set warp $Aqua$warpName")
-            Right(())
-          }
+        if optGroup.contains("all") then FutureOrNow.now(Left("Illegal group name \"all\""))
+        else
+          warpStorage
+            .setWarp(
+              Warp.fromLocation(warpName, player.getLocation).copy(groups = optGroup.toSeq)
+            )
+            .map { _ =>
+              player.sendMessage(t"${Green}Set warp $Aqua$warpName")
+              Right(())
+            }
       },
       warpListExecution
     )

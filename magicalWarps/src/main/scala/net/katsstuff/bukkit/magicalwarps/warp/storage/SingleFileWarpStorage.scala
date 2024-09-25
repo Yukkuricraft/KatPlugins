@@ -1,16 +1,17 @@
 package net.katsstuff.bukkit.magicalwarps.warp.storage
 
+import java.nio.file.{Files, Path}
+
+import scala.collection.mutable
+import scala.concurrent.Future
+import scala.jdk.CollectionConverters.*
+
 import io.circe.syntax.*
 import io.circe.{Json, Printer, parser}
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import net.katsstuff.bukkit.magicalwarps.warp.{OldWarp, Warp}
 import net.katsstuff.bukkit.magicalwarps.{DynmapInterop, WarpsConfig, WarpsPlugin}
 import org.bukkit.Bukkit
-
-import java.nio.file.{Files, Path}
-import scala.collection.mutable
-import scala.concurrent.Future
-import scala.jdk.CollectionConverters.*
 
 class SingleFileWarpStorage(storagePath: Path)(using plugin: WarpsPlugin, config: WarpsConfig) extends WarpStorage {
 
@@ -36,7 +37,7 @@ class SingleFileWarpStorage(storagePath: Path)(using plugin: WarpsPlugin, config
                 .get[Map[String, OldWarp]]("warp")
                 .map(_.map(t => (t._1, t._2.toWarpK(t._1))))
             case _ => Left(new Exception("Unsupported version"))
-        yield res).toTry.get
+        yield res.map((k, v) => (k, v.copy(groups = v.groups.filter(g => g != "all" && g.nonEmpty)): Warp))).toTry.get
       else
         plugin.logger.info("No warps found")
         Seq.empty
@@ -89,7 +90,7 @@ class SingleFileWarpStorage(storagePath: Path)(using plugin: WarpsPlugin, config
   private def save(): FutureOrNow[Unit] = {
     val res = Future {
       val printer = Printer.noSpaces.copy(dropNullValues = true)
-      val json    = Json.obj("version" -> 2.asJson, "warp" -> warpMap.asJson)
+      val json    = Json.obj("version" -> 3.asJson, "warp" -> warpMap.asJson)
 
       Files.createDirectories(storagePath.getParent)
       Files.write(storagePath, json.printWith(printer).linesIterator.toSeq.asJava)

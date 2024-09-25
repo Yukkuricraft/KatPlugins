@@ -120,8 +120,6 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
     else
       runKatLibSetup()
 
-      runKatLibSetup()
-
     warpsConfig = loadConfig().get
 
     storage = makeStorage()
@@ -158,7 +156,7 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
         helpExecution = helpCmd.helpExecution,
         reloadData = () => {
           onDisable()
-          onEnable()
+          setup(ignoreOneTime = true)
         }
       )
   

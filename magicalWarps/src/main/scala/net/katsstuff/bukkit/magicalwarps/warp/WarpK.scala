@@ -107,7 +107,7 @@ object WarpK:
   given typeclass: KMacros.RepresentableTraverseKC[WarpK] = KMacros.deriveRepresentableTraverseKC[WarpK]
 
   given Codec[WarpK[Id]] with
-    implicit val textCodec: Codec[Text] = new Codec[Text]:
+    given textCodec: Codec[Text] = new Codec[Text]:
       override def apply(a: Text): Json = parser.parse(JSONComponentSerializer.json().serialize(a)).toTry.get
 
       override def apply(c: HCursor): Result[Text] = Right(JSONComponentSerializer.json().deserialize(c.value.noSpaces))

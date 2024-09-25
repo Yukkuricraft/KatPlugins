@@ -1,9 +1,5 @@
 package net.katsstuff.bukkit.katlib.text
 
-import scala.annotation.tailrec
-import scala.jdk.CollectionConverters.*
-
-import net.kyori.adventure.key.Key
 import net.kyori.adventure.text as advanture
 
 type Text = advanture.Component
@@ -12,18 +8,25 @@ object Text {
 
   type ApplyApplicable = advanture.ComponentBuilderApplicable | String | Byte | Short | Int | Long | Float | Double
   def apply(args: ApplyApplicable*): Text =
-    advanture.LinearComponents.linear(
-      (Empty +: args).map {
-        case v: String                                   => advanture.Component.text(v)
-        case v: Byte                                     => advanture.Component.text(v)
-        case v: Short                                    => advanture.Component.text(v)
-        case v: Int                                      => advanture.Component.text(v)
-        case v: Long                                     => advanture.Component.text(v)
-        case v: Float                                    => advanture.Component.text(v)
-        case v: Double                                   => advanture.Component.text(v)
-        case other: advanture.ComponentBuilderApplicable => other
-      }*
-    )
+    val usedArgs = args.filter(_ != "")
+    if usedArgs.isEmpty then Empty
+    else
+      try
+        advanture.LinearComponents.linear(
+          usedArgs.map {
+            case v: String                                   => advanture.Component.text(v)
+            case v: Byte                                     => advanture.Component.text(v)
+            case v: Short                                    => advanture.Component.text(v)
+            case v: Int                                      => advanture.Component.text(v)
+            case v: Long                                     => advanture.Component.text(v)
+            case v: Float                                    => advanture.Component.text(v)
+            case v: Double                                   => advanture.Component.text(v)
+            case other: advanture.ComponentBuilderApplicable => other
+          }*
+        )
+      catch
+        case e: IllegalStateException =>
+          throw new Exception(s"Could not create text. Args: ${usedArgs.map(v => s"\"$v\"")}", e)
 }
 
 object TextStyle {
@@ -67,14 +70,4 @@ export TextColor.*
 extension (sc: StringContext)
   def t(args: Text.ApplyApplicable*): advanture.Component =
     StringContext.checkLengths(args, sc.parts)
-
-    @tailrec
-    def inner(
-        partsLeft: Seq[String],
-        argsLeft: Seq[Text.ApplyApplicable],
-        res: Seq[Text.ApplyApplicable]
-    ): Seq[Text.ApplyApplicable] =
-      if (argsLeft == Nil) res
-      else inner(partsLeft.tail, argsLeft.tail, res :+ argsLeft.head :+ partsLeft.head)
-
-    Text(inner(sc.parts.tail, args, Seq(sc.parts.head))*)
+    Text(sc.parts.view.zipAll(args, "", "").flatMap(t => Seq(t._1, t._2)).toSeq*)

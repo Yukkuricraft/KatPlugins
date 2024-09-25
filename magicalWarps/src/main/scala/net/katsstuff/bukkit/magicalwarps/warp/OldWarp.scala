@@ -5,6 +5,7 @@ import java.util.UUID
 import io.circe.*
 import net.katsstuff.bukkit.katlib.text.*
 import net.katsstuff.bukkit.magicalwarps.WarpsConfig
+import net.kyori.adventure.text.serializer.json.JSONComponentSerializer
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 
 case class OldWarp(
@@ -37,10 +38,10 @@ case class OldWarp(
     lore
   )
 object OldWarp:
-  implicit val textCodec: Codec[Text] = new Codec[Text]:
-    override def apply(a: Text): Json = parser.parse(LegacyComponentSerializer.legacyAmpersand().serialize(a)).toTry.get
+  given textCodec: Codec[Text] = new Codec[Text]:
+    override def apply(a: Text): Json = parser.parse(JSONComponentSerializer.json().serialize(a)).toTry.get
 
     override def apply(c: HCursor): Decoder.Result[Text] = Right(
-      LegacyComponentSerializer.legacyAmpersand().deserialize(c.value.noSpaces)
+      JSONComponentSerializer.json().deserialize(c.value.noSpaces)
     )
   end textCodec

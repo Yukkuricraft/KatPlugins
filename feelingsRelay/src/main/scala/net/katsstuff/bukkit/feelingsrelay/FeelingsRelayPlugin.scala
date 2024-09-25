@@ -7,6 +7,7 @@ import java.util.Date
 import java.util.function.BiFunction
 import java.util.logging.Logger
 
+import scala.compiletime.uninitialized
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
 
@@ -16,6 +17,7 @@ import github.scarsz.discordsrv.dependencies.commons.lang3.StringUtils
 import github.scarsz.discordsrv.objects.MessageFormat
 import github.scarsz.discordsrv.util.{DiscordUtil, MessageUtil, TimeUtil, WebhookUtil}
 import io.circe.yaml.parser
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.katsstuff.bukkit.katlib.ScalaPlugin
 import net.katsstuff.bukkit.katlib.command.Command
 import net.katsstuff.bukkit.katlib.text.*
@@ -23,7 +25,6 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.{EventHandler, Listener}
-import scala.compiletime.uninitialized
 
 class FeelingsRelayPlugin extends ScalaPlugin with Listener:
 
@@ -52,10 +53,13 @@ class FeelingsRelayPlugin extends ScalaPlugin with Listener:
     }
   )
 
+  //noinspection UnstableApiUsage
   override def onEnable(): Unit =
     relayConfig = loadConfig().toTry.get
     server.getPluginManager.registerEvents(this, this)
-    feelingsRelayCommand.register(this)
+    getLifecycleManager.registerEventHandler(
+      LifecycleEvents.COMMANDS.newHandler(e => feelingsRelayCommand.registerBrigadier(e.registrar, this))
+    )
 
   override def onDisable(): Unit =
     PlayerInteractEntityEvent.getHandlerList.unregister(this: Listener)
@@ -165,4 +169,3 @@ class FeelingsRelayPlugin extends ScalaPlugin with Listener:
       )
     else DiscordUtil.queueMessage(textChannel, discordMessage)
   end onInteract
-

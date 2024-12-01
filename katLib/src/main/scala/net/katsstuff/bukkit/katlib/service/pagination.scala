@@ -78,7 +78,9 @@ case class SimplePagination(
         val prevButton = createPrevButton(uuid, pageNum)
         val nextButton = createNextButton(uuid, pageNum, pageEnd)
 
-        val bottomText   = Component.textOfChildren(t" ", prevButton, t" Page ${pageNum + 1} of $pageEnd ", nextButton, t" ").style(Style.style(Yellow))
+        val bottomText = Component
+          .textOfChildren(t" ", prevButton, t" Page ${pageNum + 1} of $pageEnd ", nextButton, t" ")
+          .style(Style.style(Yellow))
         val bottomLength = plainTextSerializer.serialize(bottomText).length
 
         val extraPaddingBottom = Seq.fill((titleLength - bottomLength) / 2 / paddingLength)(padding)

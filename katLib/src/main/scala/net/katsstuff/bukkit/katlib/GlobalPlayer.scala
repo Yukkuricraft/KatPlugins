@@ -1,10 +1,10 @@
 package net.katsstuff.bukkit.katlib
 
+import java.util.UUID
+
 import net.katsstuff.bukkit.katlib.text.*
 import org.bukkit.entity.Player
 import org.bukkit.{Bukkit, OfflinePlayer}
-
-import java.util.UUID
 
 enum GlobalPlayer:
   case OnThisServer(player: Player)
@@ -24,7 +24,6 @@ enum GlobalPlayer:
     case OnOtherServer(_, uuid) => uuid
 
 object GlobalPlayer:
-  def ofOffline(player: OfflinePlayer): GlobalPlayer = {
+  def ofOffline(player: OfflinePlayer): GlobalPlayer =
     if player.isOnline then GlobalPlayer.OnThisServer(Bukkit.getPlayer(player.getUniqueId))
     else GlobalPlayer.OnOtherServer(player.getName, player.getUniqueId)
-  }

@@ -25,7 +25,9 @@ class RiderPlugin extends ScalaPlugin with Listener:
 
   override def onEnable(): Unit =
     server.getPluginManager.registerEvents(this, this)
-    getLifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS.newHandler(event => ejectCommand.registerBrigadier(event.registrar, this)))
+    getLifecycleManager.registerEventHandler(
+      LifecycleEvents.COMMANDS.newHandler(event => ejectCommand.registerBrigadier(event.registrar, this))
+    )
 
   override def onDisable(): Unit =
     PlayerInteractEntityEvent.getHandlerList.unregister(this: Listener)

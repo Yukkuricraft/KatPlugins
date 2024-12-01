@@ -32,33 +32,33 @@ case class Zipper[+A](lefts: Seq[A], focus: A, rights: Seq[A]) {
     else None
   end rightN
 
-  def goto(i: Int): Option[Zipper[A]] = 
+  def goto(i: Int): Option[Zipper[A]] =
     if i >= 0 && i < size then rightN(i - focusIndex) else None
 
-  def size: Int = 
+  def size: Int =
     lefts.size + rights.size + 1
 
-  def focusIndex: Int = 
+  def focusIndex: Int =
     lefts.size
 
-  def deleteGoLeft: Option[Zipper[A]] = 
+  def deleteGoLeft: Option[Zipper[A]] =
     if lefts.nonEmpty then Some(Zipper(lefts.init, lefts.last, rights)) else None
 
-  def deleteGoRight: Option[Zipper[A]] = 
+  def deleteGoRight: Option[Zipper[A]] =
     if rights.nonEmpty then Some(Zipper(lefts, rights.head, rights.tail)) else None
 
-  def modifyFocus[B >: A](f: A => B): Zipper[B] = 
+  def modifyFocus[B >: A](f: A => B): Zipper[B] =
     Zipper(lefts, f(focus), rights)
 
-  def set[B >: A](v: B): Zipper[B] = 
+  def set[B >: A](v: B): Zipper[B] =
     Zipper(lefts, v, rights)
 
-  def map[B](f: A => B): Zipper[B] = 
+  def map[B](f: A => B): Zipper[B] =
     Zipper(lefts.map(f), f(focus), rights.map(f))
 
-  def setLefts[B >: A](newLefts: Seq[B]): Zipper[B] = 
+  def setLefts[B >: A](newLefts: Seq[B]): Zipper[B] =
     Zipper(newLefts, focus, rights)
 
-  def setRights[B >: A](newRights: Seq[B]): Zipper[B] = 
+  def setRights[B >: A](newRights: Seq[B]): Zipper[B] =
     Zipper(lefts, focus, newRights)
 }

@@ -3,9 +3,11 @@ package net.katsstuff.bukkit.magicalwarps
 import java.nio.file.Path
 import java.util.logging.Logger
 import javax.sql.DataSource
+
 import scala.compiletime.uninitialized
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
+
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
@@ -17,10 +19,10 @@ import fs2.io.net.Network
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import natchez.Trace
 import natchez.Trace.Implicits.noop
-import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.command.HelpCmd
 import net.katsstuff.bukkit.katlib.db.{CrossServerPostgresTeleporter, DbUpdates, ScalaDbPlugin}
 import net.katsstuff.bukkit.katlib.util.Teleporter
+import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
 import net.katsstuff.bukkit.magicalwarps.WarpsConfig.{CrossServerCommunication, StorageType}
 import net.katsstuff.bukkit.magicalwarps.cmd.*
 import net.katsstuff.bukkit.magicalwarps.warp.storage.{SingleFileWarpStorage, WarpStorage}
@@ -63,7 +65,8 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
 
           dispatcher.unsafeRunSync(
             DbUpdates.updateIfNeeded(presentDbVersion = 1)(
-              using SkunkSessionPoolDb[IO](
+              using
+              SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,
                   port = dbConfig.port,
@@ -113,12 +116,10 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
           case None => throw new Exception("Misssing database configuration for Postgres storage")
         }
 
-  //noinspection UnstableApiUsage
+  // noinspection UnstableApiUsage
   def setup(ignoreOneTime: Boolean): Unit =
-    if ignoreOneTime then
-      runKatLibRepeatableSetup()
-    else
-      runKatLibSetup()
+    if ignoreOneTime then runKatLibRepeatableSetup()
+    else runKatLibSetup()
 
     warpsConfig = loadConfig().get
 
@@ -148,7 +149,7 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
         Teleporter.SameServerTeleporter(warpsConfig.serverName)
     }
     given Teleporter = teleporterVal
-    
+
     if !ignoreOneTime then
       val helpCmd     = new HelpCmd(this)
       val warpCommand = Commands.warp(helpCmd.helpExecution)
@@ -159,17 +160,16 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
           setup(ignoreOneTime = true)
         }
       )
-  
+
       helpCmd.registerCommand(warpCommand)
       helpCmd.registerCommand(warpsCommand)
-      
+
       getLifecycleManager.registerEventHandler(
-        LifecycleEvents.COMMANDS.newHandler: event=>
+        LifecycleEvents.COMMANDS.newHandler: event =>
           warpCommand.registerBrigadier(event.registrar, this)
           warpsCommand.registerBrigadier(event.registrar, this)
       )
   end setup
-  
 
   override def onEnable(): Unit =
     setup(ignoreOneTime = false)

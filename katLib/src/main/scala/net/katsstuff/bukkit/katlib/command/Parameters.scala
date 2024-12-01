@@ -14,7 +14,7 @@ import org.bukkit.{Bukkit, OfflinePlayer, World}
 object SpecialParameters:
   val manyNamedPlayers: Parameter[Set[Player]] = Parameter.choices(
     "player",
-    Bukkit.getOnlinePlayers.asScala.map((p: Player) => p.getName -> p).toMap,
+    Bukkit.getOnlinePlayers.asScala.map((p: Player) => p.getName -> p).toMap
   )
 
   val uuidPlayer: Parameter[Player] = Parameter.choicesSingleMap(
@@ -27,7 +27,7 @@ object SpecialParameters:
     Parameter
       .choicesSingleOpt(
         "offline-player",
-        arg => Option(Bukkit.getOfflinePlayerIfCached(arg)),
+        arg => Option(Bukkit.getOfflinePlayerIfCached(arg))
       )
       .map(Set(_))
 
@@ -36,7 +36,7 @@ object SpecialParameters:
     arg =>
       Try(UUID.fromString(arg)).toOption
         .map(uuid => Bukkit.getOfflinePlayer(uuid))
-        .flatMap(p => Option.when(p.hasPlayedBefore)(p)),
+        .flatMap(p => Option.when(p.hasPlayedBefore)(p))
   )
 end SpecialParameters
 
@@ -60,19 +60,19 @@ object Parameters:
 
   val int: Parameter[Int] = Parameter.singleSyncParameter(
     "integer",
-    parserFromOption("integer", _.toIntOption),
+    parserFromOption("integer", _.toIntOption)
   )
   val string: Parameter[String] = Parameter
     .singleSyncParameter("string", stringParser)
     .emap(s => if s.isEmpty then Left(CommandFailure.NotEnoughArguments("argument")) else Right(s))
   val double: Parameter[Double] = Parameter.singleSyncParameter(
     "number",
-    parserFromOption("number", _.toDoubleOption),
+    parserFromOption("number", _.toDoubleOption)
   )
   val uuid: Parameter[UUID] =
     Parameter.singleSyncParameter(
       "uuid",
-      parserFromOption("UUID", s => Try(UUID.fromString(s)).toOption),
+      parserFromOption("UUID", s => Try(UUID.fromString(s)).toOption)
     )
 
   val remainingAsString: Parameter[String] = new SyncParameter[String]:
@@ -100,7 +100,7 @@ object Parameters:
     single(
       Parameter.choices(
         "world",
-        Bukkit.getWorlds.asScala.map(w => w.getName -> w).toMap,
+        Bukkit.getWorlds.asScala.map(w => w.getName -> w).toMap
       )
     )
 

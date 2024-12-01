@@ -1,17 +1,17 @@
 package net.katsstuff.bukkit.katlib.command
 
 case class RawCmdArg(start: Int, end: Int, content: String):
-  
+
   def isEmpty: Boolean = content.isEmpty
-  
+
 object RawCmdArg:
 
-  //https://stackoverflow.com/questions/249791/regex-for-quoted-string-with-escaping-quotes
+  // https://stackoverflow.com/questions/249791/regex-for-quoted-string-with-escaping-quotes
   private val quotedRegex = """(?:"((?:[^"\\]|\\.)+)")|((?:\S)+)""".r
 
-  def stringToRawArgsQuoted(arguments: String): List[RawCmdArg] = 
+  def stringToRawArgsQuoted(arguments: String): List[RawCmdArg] =
     if arguments.isEmpty then List(RawCmdArg(0, 0, ""))
-    else 
+    else
       val xs = quotedRegex
         .findAllMatchIn(arguments)
         .map { m =>
@@ -22,5 +22,5 @@ object RawCmdArg:
         .toList
 
       val lastPos = arguments.length - 1
-      if arguments.endsWith(" ") then xs :+ RawCmdArg(lastPos, lastPos, "") 
+      if arguments.endsWith(" ") then xs :+ RawCmdArg(lastPos, lastPos, "")
       else xs

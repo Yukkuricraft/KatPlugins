@@ -1,9 +1,10 @@
 package net.katsstuff.bukkit.katlib.command
 
-import cats.data.NonEmptyList as NEL
-
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.reflect.ClassTag
+
+import cats.data.{NonEmptyList, NonEmptyList as NEL}
 
 enum Usage(val isSimple: Boolean):
   case Required(s: String)                                      extends Usage(true)
@@ -39,7 +40,7 @@ enum Usage(val isSimple: Boolean):
         case 0 => Choice(Nil, true)
         case 1 => if newAllowNone then Choice(List(newChoices.head), true) else newChoices.head
         case _ => Choice(newChoices, newAllowNone)
-    case _          => this
+    case _ => this
   }
 
   def printUsage: String =

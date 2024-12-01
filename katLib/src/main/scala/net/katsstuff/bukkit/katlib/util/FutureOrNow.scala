@@ -24,9 +24,9 @@ case class FutureOrNow[+A](value: Either[Future[A], Eval[A]]) {
     case (_, _)                 => FutureOrNow.fromFuture(this.asFuture.zip(that.asFuture))
 
   def isNow: Boolean = value.isRight
-  
+
   def memoize: FutureOrNow[A] = value match
-    case Left(_) => this
+    case Left(_)     => this
     case Right(eval) => FutureOrNow.fromEval(eval.memoize)
 }
 object FutureOrNow {

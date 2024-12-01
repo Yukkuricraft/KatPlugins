@@ -4,16 +4,15 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.*
 
 import com.google.common.cache.CacheBuilder
+import net.katsstuff.bukkit.katlib.ScalaPlugin
+import net.katsstuff.bukkit.katlib.command.~
 import net.katsstuff.bukkit.katlib.helper.Zipper
 import net.katsstuff.bukkit.katlib.text.*
 import org.bukkit.command.CommandSender
-import net.katsstuff.bukkit.katlib.command.~
-import scala.concurrent.ExecutionContext
-
-import net.katsstuff.bukkit.katlib.ScalaPlugin
 
 class PageCmd:
 

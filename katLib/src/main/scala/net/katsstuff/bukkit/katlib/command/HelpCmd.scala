@@ -35,7 +35,7 @@ class HelpCmd(plugin: ScalaPlugin):
     given ScalaPlugin = plugin
     execution(Parameters.remainingAsString) { case (sender, str) =>
       val pages = Bukkit.getServicesManager.load(classOf[PaginationService])
-      val args = str.split(" ").toSeq //TODO: Split this better, taking into account quotes and such
+      val args  = str.split(" ").toSeq // TODO: Split this better, taking into account quotes and such
 
       val commandsToProcess = args.headOption
         .filter(_.nonEmpty)
@@ -115,7 +115,7 @@ class HelpCmd(plugin: ScalaPlugin):
 
     val commandHelp        = executions.help(sender)
     val commandDescription = executions.description(sender)
-    
+
     val withHover = commandDescription.fold(helpBase)(desc => helpBase.hoverEvent(t"$desc"))
 
     if detail then commandHelp.orElse(commandDescription).fold(withHover)(desc => t"$withHover - $desc")

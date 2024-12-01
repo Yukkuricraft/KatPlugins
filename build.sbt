@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "3.5.1"
+ThisBuild / scalaVersion := "3.5.2"
 ThisBuild / organization := "net.katsstuff.bukkit"
 ThisBuild / crossPaths   := false
 
@@ -38,7 +38,7 @@ lazy val katLib = project
   .settings(
     commonSettings,
     version                                  := "4.0.0-SNAPSHOT",
-    libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT",
+    libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT" % Provided,
     libraryDependencies ++= katLibDeps
   )
 
@@ -62,7 +62,7 @@ lazy val homeSweetHome = project
   .enablePlugins(PaperPlugin)
   .settings(
     commonSettings,
-    version := "3.3.0",
+    version := "3.3.1",
     jarInJarFiles := Map(
       "Katlib.jar"   -> (katLib / Compile / packageBin).value,
       "KatlibDb.jar" -> (katLibDb / Compile / packageBin).value

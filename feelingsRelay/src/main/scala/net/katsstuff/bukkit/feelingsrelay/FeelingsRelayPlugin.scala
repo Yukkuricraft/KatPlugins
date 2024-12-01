@@ -53,7 +53,7 @@ class FeelingsRelayPlugin extends ScalaPlugin with Listener:
     }
   )
 
-  //noinspection UnstableApiUsage
+  // noinspection UnstableApiUsage
   override def onEnable(): Unit =
     relayConfig = loadConfig().toTry.get
     server.getPluginManager.registerEvents(this, this)

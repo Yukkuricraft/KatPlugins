@@ -1,14 +1,15 @@
 package net.katsstuff.bukkit.katlib
 
+import java.io.*
+import java.util.concurrent.ConcurrentLinkedQueue
+
+import scala.collection.{concurrent, mutable}
+import scala.concurrent.{Future, Promise}
+
 import net.katsstuff.bukkit.katlib.text.*
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer
 import org.bukkit.entity.Player
 import org.bukkit.plugin.messaging.PluginMessageListener
-
-import java.io.*
-import java.util.concurrent.ConcurrentLinkedQueue
-import scala.collection.{concurrent, mutable}
-import scala.concurrent.{Future, Promise}
 
 class BungeeChannel(using plugin: ScalaPlugin) extends PluginMessageListener:
 

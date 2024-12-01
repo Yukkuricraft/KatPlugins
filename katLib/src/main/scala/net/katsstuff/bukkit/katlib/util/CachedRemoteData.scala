@@ -1,16 +1,16 @@
 package net.katsstuff.bukkit.katlib.util
 
+import scala.collection.mutable
+import scala.compiletime.uninitialized
+import scala.concurrent.duration.*
+import scala.concurrent.{Await, ExecutionContext}
+
 import net.katsstuff.bukkit.katlib.ScalaPlugin
 import org.bukkit.Bukkit
 
-import scala.collection.mutable
-import scala.compiletime.uninitialized
-import scala.concurrent.{Await, ExecutionContext}
-import scala.concurrent.duration.*
-
 class CachedRemoteData[A <: AnyRef](fetchData: () => FutureOrNow[A], refreshTime: FiniteDuration)(
-  using sc: ScalaPlugin,
-  ec: ExecutionContext
+    using sc: ScalaPlugin,
+    ec: ExecutionContext
 ) extends AutoCloseable:
   private var currentData: A                                = uninitialized
   protected val mapped: mutable.Buffer[CachedRemoteData[?]] = mutable.Buffer()
@@ -58,7 +58,7 @@ class CachedRemoteData[A <: AnyRef](fetchData: () => FutureOrNow[A], refreshTime
 object CachedRemoteData:
 
   def default[A <: AnyRef](fetchData: () => FutureOrNow[A], refreshTime: FiniteDuration)(
-    using ScalaPlugin,
-    ExecutionContext
+      using ScalaPlugin,
+      ExecutionContext
   ): CachedRemoteData[A] =
     new CachedRemoteData[A](fetchData, refreshTime)

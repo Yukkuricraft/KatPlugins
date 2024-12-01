@@ -50,8 +50,7 @@ object CapitalizeDefaultsDecoder:
       val default = getDefaults[A](s.value).asInstanceOf[ProductK[Option, m.MirroredElemTypes]]
       new DerivedGetDefault(default)
 
-    class DerivedGetDefault[A, ElemTypes <: Tuple](default: ProductK[Option, ElemTypes])
-        extends GetDefault[A]:
+    class DerivedGetDefault[A, ElemTypes <: Tuple](default: ProductK[Option, ElemTypes]) extends GetDefault[A]:
       type Out[F[_]] = ProductK[F, ElemTypes]
       override def defaults: Out[Option] = default
     end DerivedGetDefault

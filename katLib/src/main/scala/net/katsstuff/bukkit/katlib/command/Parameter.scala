@@ -325,7 +325,7 @@ object Parameter:
       showChoicesInUsage,
       showSuggestions,
       (_, s) => getValue(s),
-      _ => suggestionsChoices,
+      _ => suggestionsChoices
     )
 
   def choicesSingleMap[A: ClassTag](
@@ -340,7 +340,7 @@ object Parameter:
       showChoicesInUsage,
       showSuggestions,
       _ => generateChoices,
-      caseSensitive,
+      caseSensitive
     )
 
   def choices[A](
@@ -355,7 +355,7 @@ object Parameter:
       showChoicesInUsage,
       showSuggestions,
       _ => generateChoices,
-      caseSensitive,
+      caseSensitive
     )
 
   def choicesSingleOptAsync[A: ClassTag](
@@ -370,7 +370,7 @@ object Parameter:
       showChoicesInUsage,
       showSuggestions,
       (_, s) => getValue(s),
-      _ => suggestionsChoices,
+      _ => suggestionsChoices
     )
 
   def choicesSingleMapAsync[A: ClassTag](
@@ -385,7 +385,7 @@ object Parameter:
       showChoicesInUsage,
       showSuggestions,
       _ => generateChoices,
-      caseSensitive,
+      caseSensitive
     )
 
   def choicesAsync[A](
@@ -400,7 +400,7 @@ object Parameter:
       showChoicesInUsage,
       showSuggestions,
       _ => generateChoices,
-      caseSensitive,
+      caseSensitive
     )
 
   private val existingSorted: mutable.AnyRefMap[AnyRef, Array[String]] = mutable.AnyRefMap()
@@ -469,14 +469,14 @@ object Parameter:
       showChoicesInUsage: Boolean = false,
       showSuggestions: Boolean = true,
       getValue: (CommandSender, String) => Option[A],
-      suggestionsChoices: CommandSender => Seq[String],
+      suggestionsChoices: CommandSender => Seq[String]
   ) extends ProxyParameter[A](
         new ChoicesSingleParameter[A](
           name,
           showChoicesInUsage,
           showSuggestions,
           (c, s) => FutureOrNow.now(getValue(c, s)),
-          c => FutureOrNow.now(suggestionsChoices(c)),
+          c => FutureOrNow.now(suggestionsChoices(c))
         )
       ):
 
@@ -485,7 +485,7 @@ object Parameter:
         showChoicesInUsage: Boolean,
         showSuggestions: Boolean,
         choices: CommandSender => Map[String, A],
-        caseSensitive: Boolean,
+        caseSensitive: Boolean
     ) =
       this(
         name,
@@ -499,7 +499,7 @@ object Parameter:
               .get(s)
               .orElse(generatedChoices.map(t => t._1.toLowerCase(Locale.ROOT) -> t._2).get(s.toLowerCase(Locale.ROOT)))
         },
-        choices(_).keys.toSeq,
+        choices(_).keys.toSeq
       )
   end ChoicesSingleSyncParameter
 
@@ -508,7 +508,7 @@ object Parameter:
       showChoicesInUsage: Boolean = false,
       showSuggestions: Boolean = true,
       getValue: (CommandSender, String) => FutureOrNow[Option[A]],
-      suggestionsChoices: CommandSender => FutureOrNow[Seq[String]],
+      suggestionsChoices: CommandSender => FutureOrNow[Seq[String]]
   ) extends Parameter[A],
         NameableParameter[A]:
 
@@ -517,7 +517,7 @@ object Parameter:
         showChoicesInUsage: Boolean,
         showSuggestions: Boolean,
         choices: CommandSender => FutureOrNow[Map[String, A]],
-        caseSensitive: Boolean,
+        caseSensitive: Boolean
     )(using ExecutionContext) =
       this(
         name,
@@ -533,7 +533,7 @@ object Parameter:
                   generatedChoices.map(t => t._1.toLowerCase(Locale.ROOT) -> t._2).get(s.toLowerCase(Locale.ROOT))
                 )
           },
-        choices(_).map(_.keys.toSeq),
+        choices(_).map(_.keys.toSeq)
       )
 
     override def parse(source: CommandSender)(using ExecutionContext): EitherT[ParameterState, CommandFailure, A] =
@@ -571,14 +571,14 @@ object Parameter:
       showChoicesInUsage: Boolean = false,
       showSuggestions: Boolean = true,
       choices: CommandSender => Map[String, A],
-      caseSensitive: Boolean = false,
+      caseSensitive: Boolean = false
   ) extends ProxyParameter[Set[A]](
         new ChoicesManyParameter(
           name,
           showChoicesInUsage,
           showSuggestions,
           c => FutureOrNow.now(choices(c)),
-          caseSensitive,
+          caseSensitive
         )
       )
 
@@ -587,7 +587,7 @@ object Parameter:
       showChoicesInUsage: Boolean = false,
       showSuggestions: Boolean = true,
       choices: CommandSender => FutureOrNow[Map[String, A]],
-      caseSensitive: Boolean = false,
+      caseSensitive: Boolean = false
   ) extends Parameter[Set[A]],
         NameableParameter[Set[A]]:
 
@@ -602,11 +602,15 @@ object Parameter:
             val head = x.content
 
             lazy val matchingRegions = resolvedChoices.collect {
-              case (k, v) if k.regionMatches(!caseSensitive, 0, head, 0, head.length) => v
+              case (k, v) if k.regionMatches(!caseSensitive, 0, head, 0, head.length) => k -> v
             }.toSet
 
             if resolvedChoices.contains(head) then (xs, Right(Set(resolvedChoices(head))))
-            else if matchingRegions.nonEmpty then (xs, Right(matchingRegions))
+            else if matchingRegions.nonEmpty then
+              val exactMatches = matchingRegions.filter(_._1.toLowerCase(Locale.ROOT) == head.toLowerCase(Locale.ROOT))
+              val usedReturn   = if exactMatches.nonEmpty then exactMatches else matchingRegions
+
+              (xs, Right(usedReturn.map(_._2)))
             else (x :: xs, Left(CommandSyntaxError(s"$head is not a valid $name", x.start)))
           }
       })

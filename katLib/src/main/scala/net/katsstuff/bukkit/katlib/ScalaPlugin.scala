@@ -41,7 +41,7 @@ class ScalaPlugin extends JavaPlugin { plugin =>
 
     override def reportFailure(cause: Throwable): Unit =
       logger.error(cause.getMessage, cause)
-      
+
   protected def runKatLibRepeatableSetup(): Unit =
     Bukkit.getServicesManager.register(classOf[PaginationService], paginationServiceImpl, this, ServicePriority.Normal)
     addDisableAction {

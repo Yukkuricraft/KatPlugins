@@ -1,8 +1,8 @@
 package net.katsstuff.bukkit.katlib.command
 
-import cats.data.{EitherT, State}
-
 import java.time.Duration
+
+import cats.data.{EitherT, State}
 import cats.syntax.all.*
 import org.bukkit.command.CommandSender
 

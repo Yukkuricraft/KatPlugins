@@ -113,8 +113,8 @@ class Command(val names: Seq[String], val permissionOpt: Option[String], val exe
 
   override def suggest(commandSourceStack: CommandSourceStack, argsArr: Array[String]): util.Collection[String] =
     val argsStr = argsArr.mkString(" ")
-    val args = RawCmdArg.stringToRawArgsQuoted(argsStr)
-    val res = Await.result(executions.tabCompleteAsync(commandSourceStack.getExecutor, args).asFuture, 1.seconds)
+    val args    = RawCmdArg.stringToRawArgsQuoted(argsStr)
+    val res     = Await.result(executions.tabCompleteAsync(commandSourceStack.getExecutor, args).asFuture, 1.seconds)
     res.asJava
 
   override def canUse(sender: CommandSender): Boolean = permissionOpt.forall(sender.hasPermission)

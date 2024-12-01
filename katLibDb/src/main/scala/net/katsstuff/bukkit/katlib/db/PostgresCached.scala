@@ -4,6 +4,7 @@ import scala.collection.mutable
 import scala.compiletime.uninitialized
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext}
+
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import io.circe.*
@@ -74,7 +75,7 @@ private class PostgresCached[A <: AnyRef](
 }
 object PostgresCached:
   private case class CachedPostgresUpdate(action: String, payload: Json) derives Decoder
-  
+
   def postgresNotify[A <: AnyRef](
       fetchData: () => FutureOrNow[A],
       refreshTime: FiniteDuration,

@@ -1,8 +1,10 @@
 package net.katsstuff.bukkit.homesweethome.home.storage
 
 import java.util.UUID
+
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
+
 import cats.data.NonEmptyList
 import dataprism.skunk.platform.PostgresSkunkPlatform
 import dataprism.skunk.platform.PostgresSkunkPlatform.Api.*

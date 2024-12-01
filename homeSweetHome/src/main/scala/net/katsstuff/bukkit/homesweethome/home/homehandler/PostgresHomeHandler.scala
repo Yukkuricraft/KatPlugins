@@ -3,10 +3,12 @@ package net.katsstuff.bukkit.homesweethome.home.homehandler
 import java.time.OffsetDateTime
 import java.util.UUID
 import javax.sql.DataSource
+
 import scala.collection.mutable
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
+
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.syntax.all.*
@@ -22,8 +24,8 @@ import net.katsstuff.bukkit.homesweethome.home.storage.HomeStorage
 import net.katsstuff.bukkit.homesweethome.lib.LibPerm
 import net.katsstuff.bukkit.homesweethome.{HSHConfig, HomePlugin, NestedMap}
 import net.katsstuff.bukkit.katlib.db.PostgresCached
-import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
+import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.milkbowl.vault.chat.Chat
 import org.bukkit.event.player.{PlayerJoinEvent, PlayerQuitEvent}
 import org.bukkit.event.{EventHandler, Listener}

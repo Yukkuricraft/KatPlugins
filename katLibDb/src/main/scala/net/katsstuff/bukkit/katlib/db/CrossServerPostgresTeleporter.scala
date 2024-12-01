@@ -2,19 +2,21 @@ package net.katsstuff.bukkit.katlib.db
 
 import java.time.OffsetDateTime
 import java.util.UUID
+
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
+
 import cats.effect.{IO, Resource}
 import dataprism.KMacros
 import dataprism.skunk.platform.PostgresSkunkPlatform.Api.*
 import dataprism.skunk.sql.SkunkTypes.*
 import dataprism.sql.*
 import io.circe.DecodingFailure
-import net.katsstuff.bukkit.katlib.{BungeeChannel, GlobalPlayer}
 import net.katsstuff.bukkit.katlib.db.CrossServerPostgresTeleporter.DelayedTeleportK
 import net.katsstuff.bukkit.katlib.text.*
 import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
+import net.katsstuff.bukkit.katlib.{BungeeChannel, GlobalPlayer}
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause
 import org.bukkit.event.{EventHandler, Listener}
@@ -73,7 +75,7 @@ class CrossServerPostgresTeleporter(sessionPool: Resource[IO, Session[IO]], curr
 ) extends Teleporter
     with Listener
     with AutoCloseable:
-  private val sameServerHandler = new Teleporter.SameServerTeleporter(currentServerName)
+  private val sameServerHandler    = new Teleporter.SameServerTeleporter(currentServerName)
   given SqlOrdered[OffsetDateTime] = SqlOrdered.defaultInstance[OffsetDateTime]
 
   private val cached = PostgresCached.postgresNotify[DelayedTeleportK.type](

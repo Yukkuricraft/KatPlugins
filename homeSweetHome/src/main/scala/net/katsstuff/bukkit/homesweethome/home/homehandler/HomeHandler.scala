@@ -2,8 +2,10 @@ package net.katsstuff.bukkit.homesweethome.home.homehandler
 
 import java.nio.file.Files
 import java.util.UUID
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
+
 import cats.syntax.all.*
 import io.circe.*
 import io.circe.syntax.*

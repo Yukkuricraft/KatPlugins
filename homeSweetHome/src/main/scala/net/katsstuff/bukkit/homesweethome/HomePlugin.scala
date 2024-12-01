@@ -1,9 +1,11 @@
 package net.katsstuff.bukkit.homesweethome
 
 import java.nio.file.{Files, Path}
+
 import scala.compiletime.uninitialized
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
+
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
@@ -17,11 +19,16 @@ import natchez.Trace.Implicits.noop
 import net.katsstuff.bukkit.homesweethome.HSHConfig.{CrossServerCommunication, StorageType}
 import net.katsstuff.bukkit.homesweethome.cmd.*
 import net.katsstuff.bukkit.homesweethome.home.homehandler.{HomeHandler, PostgresHomeHandler, SingleServerHomeHandler}
-import net.katsstuff.bukkit.homesweethome.home.storage.{HomeStorage, MultiFileHomeStorage, PostgresHomeStorage, SingleFileHomeStorage}
-import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
+import net.katsstuff.bukkit.homesweethome.home.storage.{
+  HomeStorage,
+  MultiFileHomeStorage,
+  PostgresHomeStorage,
+  SingleFileHomeStorage
+}
 import net.katsstuff.bukkit.katlib.command.{CommandRegistrationType, HelpCmd}
 import net.katsstuff.bukkit.katlib.db.{CrossServerPostgresTeleporter, DbUpdates, ScalaDbPlugin}
 import net.katsstuff.bukkit.katlib.util.Teleporter
+import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
 import org.bukkit.Bukkit
 import skunk.Session
 
@@ -59,7 +66,8 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
 
           dispatcher.unsafeRunSync(
             DbUpdates.updateIfNeeded(presentDbVersion = 1)(
-              using SkunkSessionPoolDb[IO](
+              using
+              SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,
                   port = dbConfig.port,
@@ -117,13 +125,11 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
 
         Bukkit.getPluginManager.registerEvents(storage, this)
         storage
-        
-  //noinspection UnstableApiUsage
+
+  // noinspection UnstableApiUsage
   def setup(ignoreOneTime: Boolean): Unit =
-    if ignoreOneTime then
-      runKatLibRepeatableSetup()
-    else 
-      runKatLibSetup()
+    if ignoreOneTime then runKatLibRepeatableSetup()
+    else runKatLibSetup()
 
     hshConfig = loadConfig().get
 
@@ -171,7 +177,7 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
         Teleporter.SameServerTeleporter(hshConfig.serverName)
     }
     given Teleporter = teleporterVal
-    
+
     if !ignoreOneTime then
       val homeHelp = new HelpCmd(this)
       val homeCmd = HomeCommands.homeCommand(
@@ -182,17 +188,17 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
         }
       )
       val homesCmd = HomeCommands.homesCommand
-  
+
       homeHelp.registerCommand(homeCmd)
       homeHelp.registerCommand(homesCmd)
-  
+
       getLifecycleManager.registerEventHandler(
         LifecycleEvents.COMMANDS.newHandler: event =>
           homeCmd.registerBrigadier(event.registrar, this)
           homesCmd.registerBrigadier(event.registrar, this)
       )
   end setup
-  
+
   override def onEnable(): Unit =
     setup(ignoreOneTime = false)
 

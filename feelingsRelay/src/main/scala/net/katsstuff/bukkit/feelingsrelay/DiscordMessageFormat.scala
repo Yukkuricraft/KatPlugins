@@ -7,9 +7,9 @@ import scala.jdk.CollectionConverters.*
 import github.scarsz.discordsrv.dependencies.commons.lang3.StringUtils
 import github.scarsz.discordsrv.dependencies.jda.api.entities.MessageEmbed
 import github.scarsz.discordsrv.objects.MessageFormat
-import net.katsstuff.bukkit.katlib.ScalaPlugin
 import io.circe.*
 import io.circe.syntax.*
+import net.katsstuff.bukkit.katlib.ScalaPlugin
 
 case class DiscordMessageFormat(
     enabled: Boolean = false,
@@ -141,5 +141,4 @@ object DiscordMessageFormat:
 
   case class DiscordMessageFormatEmbedTitle(text: String = "", url: String = "") derives CapitalizeDefaultsDecoder
 
-  case class DiscordMessageFormatEmbedFooter(text: String = "", iconUrl: String = "")
-      derives CapitalizeDefaultsDecoder
+  case class DiscordMessageFormatEmbedFooter(text: String = "", iconUrl: String = "") derives CapitalizeDefaultsDecoder

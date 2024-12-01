@@ -1,11 +1,13 @@
 package net.katsstuff.bukkit.homesweethome.cmd
 
 import java.util.{Locale, UUID}
+
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
+
 import cats.data.{EitherT, NonEmptyList, StateT}
 import cats.syntax.all.*
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes
@@ -14,11 +16,11 @@ import net.katsstuff.bukkit.homesweethome.*
 import net.katsstuff.bukkit.homesweethome.home.Home
 import net.katsstuff.bukkit.homesweethome.home.homehandler.HomeHandler
 import net.katsstuff.bukkit.homesweethome.lib.LibPerm
-import net.katsstuff.bukkit.katlib.{BungeeChannel, GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.katlib.command.*
 import net.katsstuff.bukkit.katlib.service.PaginationService
 import net.katsstuff.bukkit.katlib.text.*
 import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
+import net.katsstuff.bukkit.katlib.{BungeeChannel, GlobalPlayer, ScalaPlugin}
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.event.{ClickCallback, ClickEvent}
@@ -336,7 +338,7 @@ object HomeCommands:
         ) { case (player, searchQueries) =>
           val params: Map[Class[? <: HomeSearchQuery[?]], HomeSearchQuery[?]] =
             searchQueries.toList.map(q => q.getClass -> q).toMap // One query per property
-            
+
           println(s"Search executed $params")
 
           inline def getProp[Q <: HomeSearchQuery[?]](using tag: ClassTag[Q]): Option[HomeSearchQuery.Tpe[Q]] =
@@ -355,7 +357,7 @@ object HomeCommands:
               val paginationBase = Bukkit.getServicesManager.load(classOf[PaginationService])
 
               def df(d: Double): String = f"$d%.2f"
-              
+
               println(s"Home search result $homes")
 
               val body = homes.flatMap { home =>
@@ -388,7 +390,7 @@ object HomeCommands:
                   t"X: ${df(home.x)} Y: ${df(home.y)} Z: ${df(home.z)} World: $worldName"
                 )
               }
-              
+
               if body.nonEmpty then
                 paginationBase
                   .copyObj(

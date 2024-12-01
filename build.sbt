@@ -131,3 +131,20 @@ lazy val feelingsRelay = project
     libraryDependencies ++= katLibDeps.map(paperDep),
     buildInfoPackage := "net.katsstuff.bukkit.feelingsrelay"
   )
+
+lazy val cmdCallback = project
+  .dependsOn(katLib % Provided)
+  .enablePlugins(PaperPlugin)
+  .settings(
+    commonSettings,
+    version := "1.1.3",
+    jarInJarFiles := Map(
+      "Katlib.jar" -> (katLib / Compile / packageBin).value
+    ),
+    libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT" % Provided,
+    libraryDependencies += paperDep("io.circe" %% "circe-core" % "0.14.5"),
+    libraryDependencies += paperDep("io.circe" %% "circe-parser" % "0.14.5"),
+    libraryDependencies += paperDep("io.circe" %% "circe-yaml" % "0.15.0-RC1" exclude ("org.yaml", "snakeyaml")),
+    libraryDependencies ++= katLibDeps.map(paperDep),
+    buildInfoPackage := "net.katsstuff.bukkit.cmdcallback"
+  )

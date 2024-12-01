@@ -1,0 +1,12 @@
+name: CmdCallback
+main: net.katsstuff.bukkit.cmdcallback.CmdCallbackPlugin
+version: 1.0.0
+authors: [Katrix]
+api-version: '1.21'
+bootstrapper: net.katsstuff.bukkit.cmdcallback.ScalaPluginBootstrap
+loader: net.katsstuff.bukkit.cmdcallback.ScalaPluginLoader
+
+permissions:
+  cmdcallback.admin:
+    description: Configure the plugin
+    default: op

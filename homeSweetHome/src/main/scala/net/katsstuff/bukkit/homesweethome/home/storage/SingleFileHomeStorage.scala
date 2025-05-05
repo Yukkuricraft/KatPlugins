@@ -99,6 +99,7 @@ class SingleFileHomeStorage(storagePath: Path)(implicit plugin: HomePlugin, hshC
 
   override def deleteHome(homeOwner: UUID, homeName: String): FutureOrNow[Unit] =
     homeMap.remove(homeOwner, homeName)
+    residentsMap.remove(homeOwner, homeName)
 
     if allHomesForPlayer(homeOwner).value.getOrElse(sys.error("Got future in SingleFileHomeStorage")).value.isEmpty then
       _homeOwnerPlayers = _homeOwnerPlayers.removed(Bukkit.getOfflinePlayer(homeOwner).getName)

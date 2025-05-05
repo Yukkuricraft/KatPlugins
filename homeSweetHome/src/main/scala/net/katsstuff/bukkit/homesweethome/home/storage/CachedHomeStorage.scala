@@ -101,6 +101,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
     val res = deleteSavedHome(homeOwner, homeName)
 
     if homeMap.containsOuter(homeOwner) then homeMap.remove(homeOwner, homeName)
+    if residentsMap.containsOuter(homeOwner) then residentsMap.remove(homeOwner, homeName)
 
     FutureOrNow.fromFuture(res)
 

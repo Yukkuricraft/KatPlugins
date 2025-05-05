@@ -70,7 +70,7 @@ class MultiFileHomeStorage(storagePath: Path)(implicit plugin: HomePlugin, ec: E
   override def saveHome(home: Home): Future[Unit] = saveHomeData(home.owner, modifyHomes = _.updated(home.name, home))
 
   override def deleteSavedHome(uuid: UUID, name: String): Future[Unit] =
-    saveHomeData(uuid, modifyHomes = _.removed(name))
+    saveHomeData(uuid, modifyHomes = _.removed(name), modifyResidents = _.removed(name))
 
   override def searchHomes(
       location: Location,

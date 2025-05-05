@@ -3,8 +3,11 @@ ThisBuild / organization := "net.katsstuff.bukkit"
 ThisBuild / crossPaths   := false
 
 ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("snapshots")
-ThisBuild / resolvers += "papermc" at "https://papermc.io/repo/repository/maven-public"
+ThisBuild / resolvers += "papermc" at "https://repo.papermc.io/repository/maven-public"
 ThisBuild / resolvers += "DynMap" at "https://repo.mikeprimm.com/"
+
+lazy val paperVersion = "1.21-R0.1-SNAPSHOT"
+lazy val paperApiDep  = "io.papermc.paper" % "paper-api" % paperVersion % Provided
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq(
@@ -37,8 +40,8 @@ lazy val katLibDeps = Seq(
 lazy val katLib = project
   .settings(
     commonSettings,
-    version                                  := "4.0.0-SNAPSHOT",
-    libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT" % Provided,
+    version := "4.0.0-SNAPSHOT",
+    libraryDependencies += paperApiDep,
     libraryDependencies ++= katLibDeps
   )
 
@@ -54,7 +57,8 @@ lazy val katLibDb = project
   .settings(
     commonSettings,
     version := "4.0.0-SNAPSHOT",
-    libraryDependencies ++= katLibDbDeps
+    libraryDependencies ++= katLibDbDeps,
+    libraryDependencies += paperApiDep
   )
 
 lazy val homeSweetHome = project
@@ -62,14 +66,14 @@ lazy val homeSweetHome = project
   .enablePlugins(PaperPlugin)
   .settings(
     commonSettings,
-    version := "3.3.1",
+    version := "3.3.2",
     jarInJarFiles := Map(
       "Katlib.jar"   -> (katLib / Compile / packageBin).value,
       "KatlibDb.jar" -> (katLibDb / Compile / packageBin).value
     ),
     resolvers += "jitpack.io" at "https://jitpack.io", // Vault
-    libraryDependencies += "io.papermc.paper"    % "paper-api" % "1.21-R0.1-SNAPSHOT" % Provided,
-    libraryDependencies += "com.github.MilkBowl" % "VaultAPI"  % "1.7"                % Provided,
+    libraryDependencies += paperApiDep,
+    libraryDependencies += "com.github.MilkBowl" % "VaultAPI" % "1.7" % Provided,
     libraryDependencies += paperDep("io.circe" %% "circe-yaml" % "0.15.0-RC1" exclude ("org.yaml", "snakeyaml")),
     libraryDependencies += paperDep("net.katsstuff" %% "perspective-derivation" % "0.3.0"),
     libraryDependencies ++= (katLibDeps ++ katLibDbDeps).map(paperDep),
@@ -88,9 +92,9 @@ lazy val magicalWarps = project
     ),
     resolvers += "jitpack.io" at "https://jitpack.io", // Vault
     resolvers += "DynMap" at "https://repo.mikeprimm.com/",
-    libraryDependencies += "io.papermc.paper"    % "paper-api"  % "1.21-R0.1-SNAPSHOT" % Provided,
-    libraryDependencies += "com.github.MilkBowl" % "VaultAPI"   % "1.7"                % Provided,
-    libraryDependencies += "us.dynmap"           % "dynmap-api" % "3.4-beta-3"         % Provided,
+    libraryDependencies += paperApiDep,
+    libraryDependencies += "com.github.MilkBowl" % "VaultAPI"   % "1.7"        % Provided,
+    libraryDependencies += "us.dynmap"           % "dynmap-api" % "3.4-beta-3" % Provided,
     libraryDependencies += paperDep("io.circe" %% "circe-yaml" % "0.15.0-RC1" exclude ("org.yaml", "snakeyaml")),
     libraryDependencies += paperDep("net.katsstuff" %% "perspective-derivation" % "0.3.0"),
     libraryDependencies ++= (katLibDeps ++ katLibDbDeps).map(paperDep),
@@ -106,7 +110,7 @@ lazy val rider = project
     jarInJarFiles := Map(
       "Katlib.jar" -> (katLib / Compile / packageBin).value
     ),
-    libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT" % Provided,
+    libraryDependencies += paperApiDep,
     libraryDependencies ++= katLibDeps.map(paperDep),
     buildInfoPackage := "net.katsstuff.bukkit.rider"
   )
@@ -122,8 +126,8 @@ lazy val feelingsRelay = project
     ),
     resolvers += "Scarsz-Nexus" at "https://nexus.scarsz.me/content/groups/public",
     resolvers += "m2-dv8tion" at "https://m2.dv8tion.net/releases",
-    libraryDependencies += "io.papermc.paper" % "paper-api"  % "1.21-R0.1-SNAPSHOT" % Provided,
-    libraryDependencies += "com.discordsrv"   % "discordsrv" % "1.28.0"             % Provided,
+    libraryDependencies += paperApiDep,
+    libraryDependencies += "com.discordsrv" % "discordsrv" % "1.28.0" % Provided,
     libraryDependencies += paperDep("io.circe" %% "circe-core" % "0.14.5"),
     libraryDependencies += paperDep("io.circe" %% "circe-parser" % "0.14.5"),
     libraryDependencies += paperDep("io.circe" %% "circe-yaml" % "0.15.0-RC1" exclude ("org.yaml", "snakeyaml")),
@@ -141,7 +145,7 @@ lazy val cmdCallback = project
     jarInJarFiles := Map(
       "Katlib.jar" -> (katLib / Compile / packageBin).value
     ),
-    libraryDependencies += "io.papermc.paper" % "paper-api" % "1.21-R0.1-SNAPSHOT" % Provided,
+    libraryDependencies += paperApiDep,
     libraryDependencies += paperDep("io.circe" %% "circe-core" % "0.14.5"),
     libraryDependencies += paperDep("io.circe" %% "circe-parser" % "0.14.5"),
     libraryDependencies += paperDep("io.circe" %% "circe-yaml" % "0.15.0-RC1" exclude ("org.yaml", "snakeyaml")),

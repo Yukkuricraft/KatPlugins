@@ -70,7 +70,7 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
           given Network[IO] = Network.forIO
 
           dispatcher.unsafeRunSync(
-            DbUpdates.updateIfNeeded(presentDbVersion = 2)(
+            DbUpdates.updateIfNeeded(presentDbVersion = 2, dbConfig.schema)(
               using SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,

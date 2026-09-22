@@ -38,46 +38,68 @@ object DbUpdates {
       }
 
   /**
-    * Brings the database up to presentDbVersion. Everything happens in one
-    * transaction, so a failed update leaves the database as it was.
+    * Creates the schema if needed, and brings the database up to
+    * presentDbVersion. Everything happens in one transaction, so a failed
+    * update leaves the database as it was.
     */
-  def updateIfNeeded(presentDbVersion: Int)(
+  def updateIfNeeded(presentDbVersion: Int, schema: String)(
       using db: TransactionalDb[IO, Codec],
       plugin: ScalaPlugin
   ): IO[Unit] =
-    updateIfNeeded(presentDbVersion, readMigration, message => plugin.logger.info(message))
+    updateIfNeeded(presentDbVersion, schema, readMigration, message => plugin.logger.info(message))
 
-  private[db] def updateIfNeeded(presentDbVersion: Int, readMigration: Int => IO[String], log: String => Unit)(
+  private[db] def updateIfNeeded(
+      presentDbVersion: Int,
+      schema: String,
+      readMigration: Int => IO[String],
+      log: String => Unit
+  )(
       using db: TransactionalDb[IO, Codec]
   ): IO[Unit] =
-    db.transaction { (tx: TransactionDb[IO, Codec]) ?=>
-      for
-        // Released automatically when the transaction ends. Parameters are not supported in the
-        // transaction, so the (constant) values are inlined
-        _ <- tx.runIntoSimple[Int](SqlStr.const(s"SELECT 1 FROM pg_advisory_xact_lock($UpdateLockKey)"), int4.codec)
-        _ <- tx.run(sql"CREATE TABLE IF NOT EXISTS version(version int2)")
-        version <- tx.runIntoSimple[Short](sql"SELECT version FROM version", int2.codec).map(_.headOption)
-        currentVersion = version.fold(0)(_.toInt)
-        _ <-
-          if currentVersion > presentDbVersion then
-            IO.raiseError(
-              new Exception(
-                s"The database is at version $currentVersion, which is newer than this plugin supports ($presentDbVersion)"
-              )
+    // The schema is put straight into the SQL below, so it must be checked first
+    IO.fromEither(PostgresSchema.validate(schema, Map.empty).left.map(new IllegalArgumentException(_))) *>
+      db.transaction { (tx: TransactionDb[IO, Codec]) ?=>
+        for
+          // Released automatically when the transaction ends. Parameters are not supported in the
+          // transaction, so the (constant) values are inlined
+          _ <- tx.runIntoSimple[Int](SqlStr.const(s"SELECT 1 FROM pg_advisory_xact_lock($UpdateLockKey)"), int4.codec)
+          // Checked first, so an existing schema can be used without permission to create schemas
+          schemaExists <- tx
+            .runIntoSimple[Boolean](
+              SqlStr.const(
+                s"SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = '${PostgresSchema.name(schema)}')"
+              ),
+              bool.codec
             )
-          else IO.unit
-        _ <- (currentVersion + 1 to presentDbVersion).toList.traverse_ { updateVersion =>
-          IO(log(s"Applying database update $updateVersion")) *>
-            readMigration(updateVersion).flatMap { sqlMigration =>
-              splitStringIntoSqlStatements(sqlMigration).map(s => SqlStr.const(s)).traverse_(tx.run)
-            }
-        }
-        _ <- version match
-          case None =>
-            tx.run(SqlStr.const(s"INSERT INTO version VALUES ($presentDbVersion)"))
-          case Some(v) if v != presentDbVersion =>
-            tx.run(SqlStr.const(s"UPDATE version SET version = $presentDbVersion"))
-          case Some(_) => IO.pure(0)
-      yield ()
-    }
+            .map(_.head)
+          _ <-
+            if schemaExists then IO.unit
+            else
+              IO(log(s"Creating schema ${PostgresSchema.name(schema)}")) *>
+                tx.run(SqlStr.const(s"CREATE SCHEMA ${PostgresSchema.identifier(schema)}"))
+          _ <- tx.run(sql"CREATE TABLE IF NOT EXISTS version(version int2)")
+          version <- tx.runIntoSimple[Short](sql"SELECT version FROM version", int2.codec).map(_.headOption)
+          currentVersion = version.fold(0)(_.toInt)
+          _ <-
+            if currentVersion > presentDbVersion then
+              IO.raiseError(
+                new Exception(
+                  s"The database is at version $currentVersion, which is newer than this plugin supports ($presentDbVersion)"
+                )
+              )
+            else IO.unit
+          _ <- (currentVersion + 1 to presentDbVersion).toList.traverse_ { updateVersion =>
+            IO(log(s"Applying database update $updateVersion")) *>
+              readMigration(updateVersion).flatMap { sqlMigration =>
+                splitStringIntoSqlStatements(sqlMigration).map(s => SqlStr.const(s)).traverse_(tx.run)
+              }
+          }
+          _ <- version match
+            case None =>
+              tx.run(SqlStr.const(s"INSERT INTO version VALUES ($presentDbVersion)"))
+            case Some(v) if v != presentDbVersion =>
+              tx.run(SqlStr.const(s"UPDATE version SET version = $presentDbVersion"))
+            case Some(_) => IO.pure(0)
+        yield ()
+      }
 }

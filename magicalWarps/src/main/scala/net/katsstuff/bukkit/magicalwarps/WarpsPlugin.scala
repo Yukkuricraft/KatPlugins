@@ -62,7 +62,7 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
           given Network[IO] = Network.forIO
 
           dispatcher.unsafeRunSync(
-            DbUpdates.updateIfNeeded(presentDbVersion = 1)(
+            DbUpdates.updateIfNeeded(presentDbVersion = 1, dbConfig.schema)(
               using SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,

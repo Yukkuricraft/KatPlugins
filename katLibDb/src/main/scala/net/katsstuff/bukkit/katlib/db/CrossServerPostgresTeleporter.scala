@@ -57,8 +57,9 @@ object CrossServerPostgresTeleporter:
         Column("x", float8),
         Column("y", float8),
         Column("z", float8),
-        Column("yaw", float4),
-        Column("pitch", float4),
+        // The plugins create these as FLOAT, which is double precision
+        Column("yaw", float8.imap(_.toFloat)(_.toDouble)),
+        Column("pitch", float8.imap(_.toFloat)(_.toDouble)),
         Column("world_uuid", uuid),
         Column("server", text),
         Column("expires", timestamptz)

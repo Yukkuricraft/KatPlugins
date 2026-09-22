@@ -11,12 +11,11 @@ import cats.syntax.all.*
 import net.katsstuff.bukkit.katlib.command.*
 import net.katsstuff.bukkit.katlib.service.PaginationService
 import net.katsstuff.bukkit.katlib.text.*
-import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
+import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.katsstuff.bukkit.magicalwarps.lib.LibPerm
 import net.katsstuff.bukkit.magicalwarps.warp.Warp
-import net.katsstuff.bukkit.magicalwarps.warp.storage.WarpStorage
-import net.katsstuff.bukkit.magicalwarps.{WarpsConfig, WarpsPlugin}
+import net.katsstuff.bukkit.magicalwarps.{WarpsContext, WarpsPlugin}
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.command.CommandSender
@@ -31,23 +30,23 @@ object Commands {
     case class Group(group: String)      extends UserOrGroup
   }
 
-  def warpParameter(using warpStorage: WarpStorage): Parameter[Warp] =
+  def warpParameter(using ctx: WarpsContext): Parameter[Warp] =
     single(
       new Parameter.ChoicesManySyncParameter[Warp](
         "warp",
-        choices = warpStorage.allAccessibleWarps
+        choices = sender => ctx.storage.allAccessibleWarps(sender)
       )
     )
 
-  def warpGroupParameter(using warpStorage: WarpStorage): Parameter[WarpGroup] =
-    (Parameter.choicesSingleMap("group", warpStorage.groups.map(g => g -> WarpGroup(g)).toMap) |
+  def warpGroupParameter(using ctx: WarpsContext): Parameter[WarpGroup] =
+    (Parameter.choicesSingleMap("group", ctx.storage.groups.map(g => g -> WarpGroup(g)).toMap) |
       Parameters.string.map(WarpGroup.apply)).named("group")
 
   val userOrGroupParameter: Parameter[UserOrGroup] =
     ("player" ~> single(Parameters.offlinePlayers).map[UserOrGroup](UserOrGroup.User.apply)) |
       ("group" ~> Parameters.string.named("group")).map[UserOrGroup](UserOrGroup.Group.apply)
 
-  def warpListExecution(using warpStorage: WarpStorage)(using ScalaPlugin): Executions =
+  def warpListExecution(using ctx: WarpsContext)(using ScalaPlugin): Executions =
     AggExecutions(
       NonEmptyList.of(
         execution(
@@ -55,9 +54,9 @@ object Commands {
           permissions = LibPerm.List,
           description = _ => Some(t"Show all warp categories")
         ) { case (sender, _) =>
-          if warpStorage.groups.nonEmpty then
+          if ctx.storage.groups.nonEmpty then
             val pagination = Bukkit.getServicesManager.load(classOf[PaginationService])
-            val groups     = warpStorage.groups.sorted.grouped(4).toSeq
+            val groups     = ctx.storage.groups.sorted.grouped(4).toSeq
 
             inline def buttonCommand(group: String): String      = s"/warp list $group"
             inline def makeButton(group: String): (Text, String) = t"${group.capitalize}" -> buttonCommand(group)
@@ -95,8 +94,8 @@ object Commands {
           val pagination = Bukkit.getServicesManager.load(classOf[PaginationService])
 
           val title = t"$Yellow${groupName.capitalize} warps"
-          val content = warpStorage.getGroupWarps(groupName).toSeq.sortBy(_._1).collect {
-            case (name, warp) if warpStorage.canUseWarp(sender, warp) =>
+          val content = ctx.storage.getGroupWarps(groupName).toSeq.sortBy(_._1).collect {
+            case (name, warp) if ctx.storage.canUseWarp(sender, warp) =>
               val btn = button(t"$Yellow${warp.textDisplayName}", s"/warp $name")
               warp.lore.fold(btn)(lore => t"$btn - $lore")
           }
@@ -113,7 +112,7 @@ object Commands {
   def warps(
       helpExecution: Executions,
       reloadData: () => Unit
-  )(using warpStorage: WarpStorage, plugin: WarpsPlugin, ec: ExecutionContext, config: WarpsConfig): Command =
+  )(using ctx: WarpsContext, plugin: WarpsPlugin, ec: ExecutionContext): Command =
     Command("warps")(
       asyncExecution(
         "reload".asParameter,
@@ -145,9 +144,9 @@ object Commands {
       ) { case (player, warpName ~ optGroup) =>
         if optGroup.contains("all") then FutureOrNow.now(Left("Illegal group name \"all\""))
         else
-          warpStorage
+          ctx.storage
             .setWarp(
-              Warp.fromLocation(warpName, player.getLocation).copy(groups = optGroup.toSeq)
+              Warp.fromLocation(warpName, player.getLocation)(using ctx.config).copy(groups = optGroup.toSeq)
             )
             .map { _ =>
               player.sendMessage(t"${Green}Set warp $Aqua$warpName")
@@ -159,7 +158,7 @@ object Commands {
 
   def warp(
       helpExecution: Executions
-  )(using warpStorage: WarpStorage, plugin: ScalaPlugin, ec: ExecutionContext, teleporter: Teleporter): Command =
+  )(using ctx: WarpsContext, plugin: ScalaPlugin, ec: ExecutionContext): Command =
     Command("warp")(
       subCommand("help")(
         helpExecution
@@ -171,7 +170,7 @@ object Commands {
         NonEmptyList.of(
           execution(param, Senders.player, LibPerm.Teleport, description = _ => Some(t"Teleport to a warp")) {
             case (player, warp) =>
-              teleporter
+              ctx.teleporter
                 .teleport(GlobalPlayer.OnThisServer(player), warp.locationWithoutWorld, warp.world, warp.server)
                 .map { _ =>
                   player.sendMessage(t"${Green}Teleported to $Aqua${warp.textDisplayName}")
@@ -184,7 +183,7 @@ object Commands {
             permissions = LibPerm.Send,
             description = _ => Some(t"Send a player to a warp")
           ) { case (sender, warp ~ _ ~ target) =>
-            teleporter
+            ctx.teleporter
               .teleport(GlobalPlayer.OnThisServer(target), warp.locationWithoutWorld, warp.world, warp.server)
               .map { _ =>
                 sender.sendMessage(t"${Green}Sent ${target.getName} to $Aqua${warp.name}")
@@ -206,7 +205,7 @@ object Commands {
                   case UserOrGroup.Group(group) => (Nil, Seq(group))
                 }
 
-                warpStorage.setWarp(action(warp, users.map(_.getUniqueId).toSet, groups.toSet)).map { _ =>
+                ctx.storage.setWarp(action(warp, users.map(_.getUniqueId).toSet, groups.toSet)).map { _ =>
                   sender.sendMessage(success(warp.textDisplayName))
                   Right(())
                 }
@@ -248,7 +247,7 @@ object Commands {
                 if (stringGroup == "all") {
                   FutureOrNow.now(Left("""Illegal group name "all""""))
                 } else {
-                  warpStorage.setWarp(action(warp, stringGroup)).map { _ =>
+                  ctx.storage.setWarp(action(warp, stringGroup)).map { _ =>
                     sender.sendMessage(success(warp.textDisplayName))
                     Right(())
                   }
@@ -278,7 +277,7 @@ object Commands {
             permissions = LibPerm.SetLore,
             description = _ => Some(t"Set the description of a warp")
           ) { case (sender, warp ~ _ ~ newDescription) =>
-            warpStorage
+            ctx.storage
               .setWarp(
                 warp.copy(
                   lore =
@@ -298,7 +297,7 @@ object Commands {
             permissions = LibPerm.SetLore,
             description = _ => Some(t"Set the description of a warp using MiniMessage")
           ) { case (sender, warp ~ _ ~ newDescription) =>
-            warpStorage
+            ctx.storage
               .setWarp(
                 warp.copy(
                   lore =
@@ -318,10 +317,10 @@ object Commands {
             permissions = LibPerm.Rename,
             description = _ => Some(t"Rename a warp")
           ) { case (sender, warp ~ _ ~ newName) =>
-            if warpStorage.allWarps.contains(newName) then
+            if ctx.storage.allWarps.contains(newName) then
               FutureOrNow.now(Left(s"A warp named $newName already exists"))
             else
-              warpStorage.renameWarp(warp, newName).map { _ =>
+              ctx.storage.renameWarp(warp, newName).map { _ =>
                 sender.sendMessage(t"${Green}Renamed $Aqua${warp.name}$Green to $Aqua$newName")
                 Right(())
               }
@@ -335,7 +334,7 @@ object Commands {
             val newDisplayName =
               if (newDisplayNameRaw.isEmpty) None
               else Some(LegacyComponentSerializer.legacyAmpersand().deserialize(newDisplayNameRaw))
-            warpStorage.setWarp(warp.copy(displayName = newDisplayName)).map { _ =>
+            ctx.storage.setWarp(warp.copy(displayName = newDisplayName)).map { _ =>
               sender.sendMessage(
                 t"${Green}Set display name of $Aqua${warp.name}$Green to $Aqua${newDisplayName.getOrElse(t"None")}"
               )
@@ -351,7 +350,7 @@ object Commands {
             val newDisplayName =
               if (newDisplayNameRaw.isEmpty) None
               else Some(MiniMessage.miniMessage().deserialize(newDisplayNameRaw, Nil*))
-            warpStorage.setWarp(warp.copy(displayName = newDisplayName)).map { _ =>
+            ctx.storage.setWarp(warp.copy(displayName = newDisplayName)).map { _ =>
               sender.sendMessage(
                 t"${Green}Set display name of $Aqua${warp.name}$Green to $Aqua${newDisplayName.getOrElse(t"None")}"
               )
@@ -364,7 +363,7 @@ object Commands {
             permissions = LibPerm.Remove,
             description = _ => Some(t"Remove a warp")
           ) { case (sender, warp) =>
-            warpStorage.removeWarp(warp.name)
+            ctx.storage.removeWarp(warp.name)
             sender.sendMessage(t"${Green}Removed $Aqua${warp.textDisplayName}")
             Right(())
           },

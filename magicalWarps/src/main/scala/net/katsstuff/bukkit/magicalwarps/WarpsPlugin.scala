@@ -36,11 +36,8 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
 
   given plugin: WarpsPlugin = this
 
-  private var warpsConfig: WarpsConfig = uninitialized
-  private var storage: WarpStorage     = uninitialized
-
-  given WarpsConfig = warpsConfig
-  given WarpStorage = storage
+  val context: WarpsContext = new WarpsContext
+  given WarpsContext        = context
 
   def exportImportPath: Path = dataFolder.toPath.resolve("export.json")
 
@@ -58,10 +55,10 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
   def makeStorage(): WarpStorage =
 
     dbObjs =
-      if !warpsConfig.storage.postgres.use then None
+      if !context.config.storage.postgres.use then None
       else
         Some {
-          val dbConfig      = warpsConfig.storage.postgres
+          val dbConfig      = context.config.storage.postgres
           given Network[IO] = Network.forIO
 
           dispatcher.unsafeRunSync(
@@ -105,8 +102,9 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
           (sessions, db)
         }
 
-    warpsConfig.storage.`type` match
-      case StorageType.SingleFile => new SingleFileWarpStorage(dataFolder.toPath.resolve("storage.json"))
+    context.config.storage.`type` match
+      case StorageType.SingleFile =>
+        new SingleFileWarpStorage(dataFolder.toPath.resolve("storage.json"))(using this, context.config)
 
       case StorageType.Postgres =>
         dbObjs match {
@@ -123,10 +121,10 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
     if ignoreOneTime then runKatLibRepeatableSetup()
     else runKatLibSetup()
 
-    warpsConfig = loadConfig().get
+    context.config = loadConfig().get
 
-    storage = makeStorage()
-    storage.reloadWarps().failed.foreach(logger.error("Failed to reload warps", _))
+    context.storage = makeStorage()
+    context.storage.reloadWarps().failed.foreach(logger.error("Failed to reload warps", _))
 
     val bungeeChannelVal               = new BungeeChannel()
     given bungeeChannel: BungeeChannel = bungeeChannelVal
@@ -139,12 +137,12 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
       this.getServer.getMessenger.unregisterIncomingPluginChannel(this)
     }
 
-    val teleporterVal = warpsConfig.crossServerCommunication match {
+    context.teleporter = context.config.crossServerCommunication match {
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
             val postgresTeleporter =
-              CrossServerPostgresTeleporter(pool, warpsConfig.serverName, "magicalwarps_delayed_teleport_change")
+              CrossServerPostgresTeleporter(pool, context.config.serverName, "magicalwarps_delayed_teleport_change")
             Bukkit.getPluginManager.registerEvents(postgresTeleporter, this)
 
             addDisableAction {
@@ -157,9 +155,8 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
         }
 
       case CrossServerCommunication.Single =>
-        Teleporter.SameServerTeleporter(warpsConfig.serverName)
+        Teleporter.SameServerTeleporter(context.config.serverName)
     }
-    given Teleporter = teleporterVal
 
     if !ignoreOneTime then
       val helpCmd     = new HelpCmd(this)

@@ -23,6 +23,18 @@ lazy val commonSettings = Seq(
   )
 )
 
+lazy val testSettings = Seq(
+  libraryDependencies ++= Seq(
+    "org.scalameta"        %% "munit"                     % "1.3.6"   % Test,
+    "com.github.seeseemelk" % "MockBukkit-v1.21"          % "3.133.2" % Test,
+    "org.testcontainers"    % "testcontainers-postgresql" % "2.0.5"   % Test,
+    "ch.qos.logback"        % "logback-classic"           % "1.6.3"   % Test
+  ),
+  // Bukkit is a global singleton, so suites can't run at the same time
+  Test / parallelExecution := false,
+  Test / fork              := true
+)
+
 lazy val libraryExclusions = Seq(
   ExclusionRule("org.yaml", "snakeyaml"),
   ExclusionRule("io.papermc.paper", "paper-api"),
@@ -40,6 +52,7 @@ lazy val katLibDeps = Seq(
 lazy val katLib = project
   .settings(
     commonSettings,
+    testSettings,
     version := "4.0.0-SNAPSHOT",
     libraryDependencies += paperApiDep,
     libraryDependencies ++= katLibDeps
@@ -53,19 +66,21 @@ lazy val katLibDbDeps = Seq(
 )
 
 lazy val katLibDb = project
-  .dependsOn(katLib)
+  .dependsOn(katLib % "compile->compile;test->test")
   .settings(
     commonSettings,
+    testSettings,
     version := "4.0.0-SNAPSHOT",
     libraryDependencies ++= katLibDbDeps,
     libraryDependencies += paperApiDep
   )
 
 lazy val homeSweetHome = project
-  .dependsOn(katLib % Provided, katLibDb % Provided)
+  .dependsOn(katLib % Provided, katLibDb % "provided->compile;test->test")
   .enablePlugins(PaperPlugin)
   .settings(
     commonSettings,
+    testSettings,
     version := "3.3.2",
     jarInJarFiles := Map(
       "Katlib.jar"   -> (katLib / Compile / packageBin).value,
@@ -81,10 +96,11 @@ lazy val homeSweetHome = project
   )
 
 lazy val magicalWarps = project
-  .dependsOn(katLib % Provided, katLibDb % Provided)
+  .dependsOn(katLib % Provided, katLibDb % "provided->compile;test->test")
   .enablePlugins(PaperPlugin)
   .settings(
     commonSettings,
+    testSettings,
     version := "2.2.0",
     jarInJarFiles := Map(
       "Katlib.jar"   -> (katLib / Compile / packageBin).value,

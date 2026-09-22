@@ -84,7 +84,7 @@ class SingleFileWarpStorage(storagePath: Path)(using plugin: WarpsPlugin, config
     warpMap.clear()
     warpMap ++= warps.map(w => (w.name, w))
 
-    DynmapInterop.deleteMarkerSet()
+    if dynmapLoaded then DynmapInterop.deleteMarkerSet()
     warps.foreach(addMarker)
 
     save()

@@ -10,6 +10,7 @@ import io.circe.Decoder.Result
 import io.circe.yaml.parser
 import net.katsstuff.bukkit.homesweethome.HSHConfig.CrossServerCommunication
 import net.katsstuff.bukkit.katlib.ScalaPlugin
+import net.katsstuff.bukkit.katlib.db.PostgresSchema
 
 case class HSHConfig(
     home: HSHConfig.HomeConfig,
@@ -35,8 +36,17 @@ object HSHConfig:
       database: String,
       password: Option[String],
       maxConnections: Int,
+      schema: String,
       parameters: Map[String, String]
-  )
+  ):
+    def connectionParameters: Map[String, String] =
+      PostgresSchema.connectionParameters(schema, parameters)
+
+  object PostgresOptions:
+    given Decoder[PostgresOptions] = Decoder.derived[PostgresOptions].emap { options =>
+      if !options.use then Right(options)
+      else PostgresSchema.validate(options.schema, options.parameters).map(_ => options)
+    }
 
   enum StorageType:
     case SingleFile
@@ -72,15 +82,14 @@ object HSHConfig:
     }.toEither.flatMap(parser.parse).flatMap { json =>
       val cursor = json.hcursor
       cursor.get[Int]("version").flatMap {
-        case 3 => cursor.as[HSHConfig]
-        case 2 =>
-          scalaPlugin.saveResource("config-v3.yml", false)
+        case 4 => cursor.as[HSHConfig]
+        case _ =>
+          scalaPlugin.saveResource("config-v4.yml", false)
 
           Left(
             new Exception(
-              s"Please update the config. The current form of the config has been saved as \"config-v3.yml\""
+              s"Please update the config. The current form of the config has been saved as \"config-v4.yml\""
             )
           )
-        case _ => Left(new Exception("Unsupported version"))
       }
     }

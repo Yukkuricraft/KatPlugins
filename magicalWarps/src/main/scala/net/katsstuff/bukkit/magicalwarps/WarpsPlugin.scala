@@ -65,15 +65,14 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
 
           dispatcher.unsafeRunSync(
             DbUpdates.updateIfNeeded(presentDbVersion = 1)(
-              using
-              SkunkSessionPoolDb[IO](
+              using SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,
                   port = dbConfig.port,
                   user = dbConfig.user,
                   database = dbConfig.database,
                   password = dbConfig.password,
-                  parameters = dbConfig.parameters
+                  parameters = dbConfig.connectionParameters
                 )
               ),
               this
@@ -90,7 +89,7 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
                   database = dbConfig.database,
                   password = dbConfig.password,
                   max = dbConfig.maxConnections,
-                  parameters = dbConfig.parameters
+                  parameters = dbConfig.connectionParameters
                 )
                 .allocated
             )

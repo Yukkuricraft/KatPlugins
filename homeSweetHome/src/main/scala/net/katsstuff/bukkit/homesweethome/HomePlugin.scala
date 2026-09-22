@@ -65,7 +65,7 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
           given Network[IO] = Network.forIO
 
           dispatcher.unsafeRunSync(
-            DbUpdates.updateIfNeeded(presentDbVersion = 1)(
+            DbUpdates.updateIfNeeded(presentDbVersion = 2)(
               using SkunkSessionPoolDb[IO](
                 skunk.Session.single[IO](
                   host = dbConfig.host,
@@ -168,7 +168,7 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
-            CrossServerPostgresTeleporter(pool, hshConfig.serverName)
+            CrossServerPostgresTeleporter(pool, hshConfig.serverName, "homesweethome_delayed_teleport_change")
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
         }
 

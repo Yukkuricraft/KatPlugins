@@ -49,7 +49,7 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
     PostgresCached.postgresNotify[Seq[GlobalPlayer]](
       () => FutureOrNow.fromFuture(Select(Query.from(OnlinePlayerGlobalK.table)).run.map(_.map(_.asGlobalPlayer))),
       60.seconds,
-      "HomeSweetHome.GlobalPlayersChange",
+      "homesweethome_global_players_change",
       sessionPool,
       onCreate = Some((old, json) =>
         json.hcursor
@@ -94,7 +94,7 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
       )
     },
     60.seconds,
-    "HomeSweetHome.RequestsChange",
+    "homesweethome_requests_change",
     sessionPool,
     onCreate = Some((old, json) =>
       for
@@ -127,7 +127,7 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
       )
     },
     60.seconds,
-    "HomeSweetHome.InvitesChange",
+    "homesweethome_invites_change",
     sessionPool,
     onCreate = Some((old, json) =>
       for

@@ -25,7 +25,7 @@ import net.katsstuff.bukkit.katlib.util.Teleporter
 import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
 import net.katsstuff.bukkit.magicalwarps.WarpsConfig.{CrossServerCommunication, StorageType}
 import net.katsstuff.bukkit.magicalwarps.cmd.*
-import net.katsstuff.bukkit.magicalwarps.warp.storage.{SingleFileWarpStorage, WarpStorage}
+import net.katsstuff.bukkit.magicalwarps.warp.storage.{PostgresWarpStorage, SingleFileWarpStorage, WarpStorage}
 import org.bukkit.Bukkit
 import org.bukkit.event.HandlerList
 import skunk.Session
@@ -110,8 +110,10 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
 
       case StorageType.Postgres =>
         dbObjs match {
-          case Some((_, given Db[Future, skunk.Codec])) =>
-            ??? // new PostgresWarpStorage(new PostgresQueryPlatform)
+          case Some((pool, given Db[Future, skunk.Codec])) =>
+            val storage = new PostgresWarpStorage(pool)
+            addDisableAction(storage.close())
+            storage
 
           case None => throw new Exception("Misssing database configuration for Postgres storage")
         }

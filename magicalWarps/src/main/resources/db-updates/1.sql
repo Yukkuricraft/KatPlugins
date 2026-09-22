@@ -1,6 +1,6 @@
 CREATE TABLE warps
 (
-    name                TEXT             NOT NULL,
+    name                TEXT             NOT NULL PRIMARY KEY,
     x                   DOUBLE PRECISION NOT NULL,
     y                   DOUBLE PRECISION NOT NULL,
     z                   DOUBLE PRECISION NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE warps
     display_name        JSONB,
     groups              TEXT[]           NOT NULL,
     allowed_perm_groups TEXT[]           NOT NULL,
-    allowed_users       uuid             NOT NULL,
+    allowed_users       uuid[]           NOT NULL,
     lore                JSONB
 );
 
@@ -44,6 +44,12 @@ BEGIN
 end;;
 $triger$
     LANGUAGE plpgsql;
+
+CREATE TRIGGER warps_notify
+    AFTER INSERT OR UPDATE OR DELETE
+    ON warps
+    FOR EACH ROW
+EXECUTE PROCEDURE notify_trigger('magicalwarps_warps_change');
 
 CREATE TABLE delayed_teleports
 (

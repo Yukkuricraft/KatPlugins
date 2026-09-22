@@ -6,6 +6,7 @@ import java.util.concurrent.Callable
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
+import scala.util.control.NonFatal
 
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import net.katsstuff.bukkit.katlib.command.CommandRegistrationType.Brigadier
@@ -63,9 +64,11 @@ class ScalaPlugin extends JavaPlugin { plugin =>
         )
 
   def runDisableActions(): Unit =
+    // Newest first, so things are torn down before what they depend on (like the DB dispatcher)
     while doWhenDisabling.nonEmpty do
-      val action = doWhenDisabling.dequeue()
-      action()
+      val action = doWhenDisabling.removeLast()
+      try action()
+      catch case NonFatal(e) => logger.error("Failed to run disable action", e)
   end runDisableActions
 
   def addDisableAction(action: => Unit): Unit = doWhenDisabling.enqueue(() => action)

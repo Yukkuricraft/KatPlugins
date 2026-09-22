@@ -1,5 +1,7 @@
 package net.katsstuff.bukkit.katlib.db
 
+import java.util.Locale
+
 import scala.collection.mutable
 import scala.compiletime.uninitialized
 import scala.concurrent.duration.*
@@ -30,7 +32,7 @@ private class PostgresCached[A <: AnyRef](
   private var closeIo: IO[Unit] = uninitialized
   startListenForNotify()
 
-  private val allOperations = Seq("CREATE" -> onCreate, "UPDATE" -> onUpdate, "DELETE" -> onDelete)
+  private val allOperations = Seq("INSERT" -> onCreate, "UPDATE" -> onUpdate, "DELETE" -> onDelete)
     .collect { case (k, Some(f)) =>
       k -> f
     }
@@ -39,11 +41,17 @@ private class PostgresCached[A <: AnyRef](
     }
 
   private def startListenForNotify(): Unit = {
+    val channel = Identifier
+      .fromString(postgresChannel)
+      .toOption
+      .filter(_.value == postgresChannel.toLowerCase(Locale.ROOT))
+      .getOrElse(throw new IllegalArgumentException(s"Invalid Postgres channel name $postgresChannel"))
+
     val (stream, close) = sc.dispatcher.unsafeRunSync(
       for
         t1 <- sessionPool.allocated
         (session, close1) = t1
-        t2 <- session.channel(Identifier.fromString(postgresChannel).toOption.get).listenR(512).allocated
+        t2 <- session.channel(channel).listenR(512).allocated
         (stream, close2) = t2
       yield (stream, close2 *> close1)
     )
@@ -53,21 +61,34 @@ private class PostgresCached[A <: AnyRef](
     sc.dispatcher.unsafeRunAndForget(
       stream
         .foreach { notification =>
-          parser.decode[CachedPostgresUpdate](notification.value) match {
-            case Right(CachedPostgresUpdate(operation, payload)) =>
-              IO(
-                if get != null then
-                  allOperations.get(operation).flatMap(f => f(get, payload).toOption).fold(refreshNow())(setData)
-                else refreshNow()
-              )
-
-            case Left(e) => IO(sc.logger.error(e.getMessage, e))
+          val handle = parser.decode[CachedPostgresUpdate](notification.value) match {
+            case Right(CachedPostgresUpdate(operation, payload)) => IO(applyUpdate(operation, payload))
+            case Left(e)                                         => IO(sc.logger.error(e.getMessage, e))
           }
+
+          handle.handleError(e => sc.logger.error(s"Failed to handle notification on $postgresChannel", e))
         }
         .compile
         .drain
     )
   }
+
+  /**
+    * Patches the data with the notification if possible, and otherwise fetches
+    * everything again.
+    */
+  private def applyUpdate(operation: String, payload: Json): Unit =
+    val applied = allOperations.get(operation).exists { f =>
+      tryModify { data =>
+        f(data, payload) match
+          case Right(newData) => Some(newData)
+          case Left(e) =>
+            sc.logger.warn(s"Couldn't apply $operation notification on $postgresChannel, refreshing instead", e)
+            None
+      }
+    }
+
+    if !applied then refreshNow()
 
   override def close(): Unit =
     super.close()

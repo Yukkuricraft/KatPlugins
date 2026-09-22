@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import javax.sql.DataSource
 
-import scala.collection.mutable
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
@@ -72,10 +72,10 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
           t._1 -> t._2
             .groupMapReduce(_._2)(_._3)((a, _) => a)
             .flatMap(t => t._2.toOption.map(t._1 -> _))
-            .to(mutable.Map)
+            .to(TrieMap)
         }
-        .to(mutable.Map),
-      () => mutable.Map()
+        .to(TrieMap),
+      () => TrieMap()
     )
 
   private val requests = PostgresCached.postgresNotify[NestedMap[UUID, UUID, Home]](

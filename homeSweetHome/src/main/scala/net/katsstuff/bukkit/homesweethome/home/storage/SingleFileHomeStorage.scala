@@ -4,7 +4,6 @@ import java.nio.file.{Files, Path}
 import java.time.Instant
 import java.util.UUID
 
-import scala.collection.mutable
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
 
@@ -18,10 +17,9 @@ import org.bukkit.{Bukkit, Location, OfflinePlayer}
 import perspective.Id
 
 class SingleFileHomeStorage(storagePath: Path)(implicit plugin: HomePlugin, hshConfig: HSHConfig) extends HomeStorage {
-  private val homeMap: NestedMap[UUID, String, Home] = NestedMap(mutable.HashMap.empty, () => mutable.HashMap.empty)
-  private val residentsMap: NestedMap[UUID, String, Set[UUID]] =
-    NestedMap(mutable.HashMap.empty, () => mutable.HashMap.empty)
-  private var _homeOwnerPlayers: Map[String, OfflinePlayer] = Map.empty
+  private val homeMap: NestedMap[UUID, String, Home]                  = NestedMap.concurrent
+  private val residentsMap: NestedMap[UUID, String, Set[UUID]]        = NestedMap.concurrent
+  @volatile private var _homeOwnerPlayers: Map[String, OfflinePlayer] = Map.empty
 
   override def reloadHomeData(): Future[Unit] =
     plugin.logger.info("Loading homes")
@@ -142,8 +140,7 @@ class SingleFileHomeStorage(storagePath: Path)(implicit plugin: HomePlugin, hshC
 
   override def addResident(homeOwner: UUID, homeName: String, resident: UUID): FutureOrNow[Unit] =
     if homeMap.contains(homeOwner, homeName) then
-      val oldResidents = residentsMap.getOrElseUpdate(homeOwner, homeName, Set.empty)
-      residentsMap.put(homeOwner, homeName, oldResidents + resident)
+      residentsMap.updateWith(homeOwner, homeName)(residents => Some(residents.getOrElse(Set.empty) + resident))
 
       save()
     else
@@ -153,8 +150,7 @@ class SingleFileHomeStorage(storagePath: Path)(implicit plugin: HomePlugin, hshC
 
   override def removeResident(homeOwner: UUID, homeName: String, resident: UUID): FutureOrNow[Unit] =
     if homeMap.contains(homeOwner, homeName) then
-      val oldResidents = residentsMap.getOrElse(homeOwner, homeName, Set.empty)
-      residentsMap.put(homeOwner, homeName, oldResidents - resident)
+      residentsMap.updateWith(homeOwner, homeName)(residents => Some(residents.getOrElse(Set.empty) - resident))
 
       save()
     else

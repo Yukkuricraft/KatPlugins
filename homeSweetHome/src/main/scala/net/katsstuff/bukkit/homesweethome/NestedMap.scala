@@ -1,5 +1,6 @@
 package net.katsstuff.bukkit.homesweethome
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
 /**
@@ -40,8 +41,10 @@ class NestedMap[A, B, C] private (internalMap: mutable.Map[A, mutable.Map[B, C]]
   def applyOrElse[A1 <: A, B1 <: B, C1 >: C](k1: A1, k2: B1, default: (A1, B1) => C1): C1 =
     getOrElse(k1, k2, default(k1, k2))
 
-  def put(k1: A, k2: B, v: C): Option[C]    = getNestedMapAndUpdate(k1).put(k2, v)
-  def update(k1: A, k2: B, v: C): Option[C] = put(k1, k2, v)
+  def put(k1: A, k2: B, v: C): Option[C] = getNestedMapAndUpdate(k1).put(k2, v)
+
+  def updateWith(k1: A, k2: B)(f: Option[C] => Option[C]): Option[C] = getNestedMapAndUpdate(k1).updateWith(k2)(f)
+  def update(k1: A, k2: B, v: C): Option[C]                          = put(k1, k2, v)
 
   override def addOne(t: (A, B, C)): this.type =
     val (k1, k2, v) = t
@@ -68,3 +71,6 @@ object NestedMap:
       internalMap: mutable.Map[A, mutable.Map[B, C]],
       create: () => mutable.Map[B, C]
   ): NestedMap[A, B, C] = new NestedMap(internalMap, create)
+
+  /** A nested map that can safely be used from multiple threads at once. */
+  def concurrent[A, B, C]: NestedMap[A, B, C] = new NestedMap(TrieMap.empty, () => TrieMap.empty)

@@ -22,14 +22,10 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
     extends HomeStorage
     with Listener
     with AutoCloseable {
-  protected val homeMap: NestedMap[UUID, String, Home] = NestedMap(mutable.HashMap.empty, () => mutable.HashMap.empty)
-  protected val residentsMap: NestedMap[UUID, String, Set[UUID]] =
-    NestedMap(mutable.HashMap.empty, () => mutable.HashMap.empty)
+  protected val homeMap: NestedMap[UUID, String, Home]           = NestedMap.concurrent
+  protected val residentsMap: NestedMap[UUID, String, Set[UUID]] = NestedMap.concurrent
 
   override def reloadHomeData(): Future[Unit] =
-    homeMap.clear()
-    residentsMap.clear()
-
     def flattenNested[A, B](
         nested: Iterable[(UUID, Map[String, A])],
         f: (A, UUID, String) => B = (a: A, _: UUID, _: String) => a
@@ -39,16 +35,26 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
       )
 
     plugin.logger.info("Loading homes")
-    for
-      onlinePlayerHomes <- Future.traverse(Bukkit.getOnlinePlayers.asScala) { player =>
-        fetchAllHomesForPlayer(player.getUniqueId).map(player.getUniqueId -> _)
-      }
-      _ = homeMap ++= flattenNested(onlinePlayerHomes)
-      onlineResidents <- Future.traverse(Bukkit.getOnlinePlayers.asScala) { player =>
-        fetchAllResidentsForPlayer(player.getUniqueId).map(player.getUniqueId -> _)
-      }
-      _ = residentsMap ++= flattenNested(onlineResidents)
-    yield ()
+    val onlinePlayers = Bukkit.getOnlinePlayers.asScala.toSeq
+    val fetched =
+      for
+        onlinePlayerHomes <- Future.traverse(onlinePlayers) { player =>
+          fetchAllHomesForPlayer(player.getUniqueId).map(player.getUniqueId -> _)
+        }
+        onlineResidents <- Future.traverse(onlinePlayers) { player =>
+          fetchAllResidentsForPlayer(player.getUniqueId).map(player.getUniqueId -> _)
+        }
+      yield (onlinePlayerHomes, onlineResidents)
+
+    // The maps are read from the server thread, so they are only changed there
+    fetched.map { (onlinePlayerHomes, onlineResidents) =>
+      homeMap.clear()
+      residentsMap.clear()
+      onlinePlayers.foreach(player => homeMap.makeInnerIfNotExists(player.getUniqueId))
+      homeMap ++= flattenNested(onlinePlayerHomes)
+      residentsMap ++= flattenNested(onlineResidents)
+      ()
+    }(using plugin.serverThreadExecutionContext)
 
   protected val homeMapCache: mutable.Map[(UUID, String), Any] =
     CacheBuilder.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build[(UUID, String), Any]().asMap().asScala
@@ -132,7 +138,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
     val res = saveResident(Resident[Id](homeOwner, homeName, resident, Instant.now()))
 
     if homeMap.containsOuter(homeOwner) then
-      residentsMap.update(homeOwner, homeName, residentsMap.getOrElse(homeOwner, homeName, Set.empty) + resident)
+      residentsMap.updateWith(homeOwner, homeName)(residents => Some(residents.getOrElse(Set.empty) + resident))
 
     FutureOrNow.fromFuture(res)
 
@@ -142,11 +148,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
     val res = removeSavedResident(homeOwner, homeName, resident)
 
     if homeMap.containsOuter(homeOwner) then
-      residentsMap.update(
-        homeOwner,
-        homeName,
-        residentsMap.getOrElse(homeOwner, homeName, Set.empty).filter(_ != resident)
-      )
+      residentsMap.updateWith(homeOwner, homeName)(residents => Some(residents.getOrElse(Set.empty) - resident))
 
     FutureOrNow.fromFuture(res)
 
@@ -179,14 +181,14 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
     val homesFut = fetchAllHomesForPlayer(uuid)
     homesFut.foreach { homes =>
       if event.getPlayer.isOnline then homeMap ++= homes.map(t => (uuid, t._1, t._2))
-    }
+    }(using plugin.serverThreadExecutionContext)
 
     homesFut.failed.foreach(e => plugin.logger.error(e.getMessage, e))
 
     val residentsFut = fetchAllResidentsForPlayer(uuid)
     residentsFut.foreach { residents =>
       if event.getPlayer.isOnline then residentsMap ++= residents.map(t => (uuid, t._1, t._2))
-    }
+    }(using plugin.serverThreadExecutionContext)
 
     residentsFut.failed.foreach(e => plugin.logger.error(e.getMessage, e))
 

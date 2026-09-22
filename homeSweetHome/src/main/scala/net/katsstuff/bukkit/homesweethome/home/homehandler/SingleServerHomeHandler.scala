@@ -5,6 +5,7 @@ import java.nio.file.{Files, Path}
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
@@ -29,9 +30,9 @@ class SingleServerHomeHandler(storage: HomeStorage, hshConfig: HSHConfig) extend
   private def chat: Chat = Bukkit.getServicesManager.load(classOf[Chat])
 
   private val requests: NestedMap[UUID, UUID, Home] =
-    NestedMap(mutable.HashMap.empty, () => createInvitesRequests)
+    NestedMap(TrieMap.empty, () => createInvitesRequests)
   private val invites: NestedMap[UUID, UUID, Home] =
-    NestedMap(mutable.HashMap.empty, () => createInvitesRequests)
+    NestedMap(TrieMap.empty, () => createInvitesRequests)
 
   def globalOnlinePlayers: Seq[GlobalPlayer] = Bukkit.getOnlinePlayers.asScala.map(GlobalPlayer.OnThisServer(_)).toSeq
 

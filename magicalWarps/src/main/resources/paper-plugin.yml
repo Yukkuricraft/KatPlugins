@@ -71,3 +71,9 @@ permissions:
   magicalwarps.mod.reload:
     description: Reloads the config and storage of MagicalWarps
     default: op
+  magicalwarps.import:
+    description: Imports warps from export.json, replacing all current warps
+    default: op
+  magicalwarps.export:
+    description: Exports all warps to export.json
+    default: op

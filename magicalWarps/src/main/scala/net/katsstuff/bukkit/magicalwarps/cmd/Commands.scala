@@ -133,6 +133,28 @@ object Commands {
           }
         )
       },
+      asyncExecution(
+        "export".asParameter,
+        Senders.commandSender,
+        LibPerm.Export,
+        description = _ => Some(t"Export warps")
+      ) { case (sender, _) =>
+        ctx.storage.exportStorageData().map { _ =>
+          sender.sendMessage(t"${Green}Export successful")
+          Right(())
+        }
+      },
+      asyncExecution(
+        "import".asParameter,
+        Senders.commandSender,
+        LibPerm.Import,
+        description = _ => Some(t"Import warps")
+      ) { case (sender, _) =>
+        ctx.storage.importStorageData().map { _ =>
+          sender.sendMessage(t"${Green}Import successful")
+          Right(())
+        }
+      },
       subCommand("help")(
         helpExecution
       ),

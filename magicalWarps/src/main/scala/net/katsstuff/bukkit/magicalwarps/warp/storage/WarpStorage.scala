@@ -1,10 +1,13 @@
 package net.katsstuff.bukkit.magicalwarps.warp.storage
 
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import java.util.Locale
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.*
 
+import io.circe.*
+import io.circe.syntax.*
 import net.katsstuff.bukkit.katlib.util.FutureOrNow
 import net.katsstuff.bukkit.magicalwarps.lib.LibPerm
 import net.katsstuff.bukkit.magicalwarps.warp.Warp
@@ -73,4 +76,28 @@ trait WarpStorage {
     *   The warps to import.
     */
   def importData(warps: Seq[Warp]): FutureOrNow[Unit]
+
+  /** Export all saved data to [[exportImportPath]]. */
+  def exportStorageData()(using ExecutionContext): FutureOrNow[Unit] =
+    exportData().flatMap { warps =>
+      val str = Json.obj("warps" := warps).noSpaces
+      FutureOrNow.fromFuture(
+        Future {
+          Files.createDirectories(exportImportPath.getParent)
+          Files.write(exportImportPath, str.linesIterator.toSeq.asJava)
+          ()
+        }
+      )
+    }
+
+  /** Import data from [[exportImportPath]], replacing what is in storage. */
+  def importStorageData()(using ExecutionContext): FutureOrNow[Unit] =
+    FutureOrNow
+      .fromFuture(Future(Files.readAllLines(exportImportPath).asScala.mkString("\n")))
+      .flatMap { str =>
+        FutureOrNow.fromFuture(
+          Future.fromTry(parser.parse(str).flatMap(_.hcursor.get[Seq[Warp]]("warps")).toTry)
+        )
+      }
+      .flatMap(importData)
 }

@@ -6,6 +6,8 @@ object LibPerm {
 
   final val Info   = s"$MagicalWarps.info"
   final val Reload = s"$MagicalWarps.reload"
+  final val Import = s"$MagicalWarps.import"
+  final val Export = s"$MagicalWarps.export"
 
   final val Warps    = s"$MagicalWarps.warps"
   final val Teleport = s"$Warps.teleport"

@@ -62,3 +62,28 @@ class SingleFileWarpStorageTest extends WarpsSuite:
     result(s.importData(Seq(warp("new"))))
     assertEquals(storage().allWarps.keySet, Set("new"))
   }
+
+  test("warps exported to a file can be imported again, replacing what was there") {
+    val s     = storage()
+    val warps = Seq(fullWarp("spawn"), warp("Hub"))
+    warps.foreach(w => result(s.setWarp(w)))
+    result(s.exportStorageData())
+
+    result(s.removeWarp("spawn"))
+    result(s.setWarp(warp("added later")))
+    result(s.importStorageData())
+
+    val expected = warps.map(w => w.name -> w).toMap
+    assertEquals(s.allWarps, expected)
+    assertEquals(storage().allWarps, expected)
+  }
+
+  test("importing a missing file fails, and changes nothing") {
+    val s = storage()
+    result(s.setWarp(warp("spawn")))
+    Files.deleteIfExists(s.exportImportPath)
+
+    intercept[Exception](result(s.importStorageData()))
+    assertEquals(storage().allWarps.keySet, Set("spawn"))
+  }
+

@@ -1,5 +1,7 @@
 package net.katsstuff.bukkit.magicalwarps.warp.storage
 
+import java.nio.file.Files
+
 import net.katsstuff.bukkit.magicalwarps.testing.WarpsSuite
 import net.katsstuff.bukkit.magicalwarps.warp.Warp
 import skunk.codec.all.*
@@ -142,3 +144,45 @@ class PostgresWarpStorageTest extends WarpsSuite:
     result(a.importData(Nil))
     assertEquals(a.allWarps, Map.empty[String, Warp])
   }
+
+  test("warps exported to a file can be imported again, replacing what was there") {
+    val database = migratedDatabase()
+    val a        = startWarpServer(database)
+    val b        = startWarpServer(database, "b")
+    val warps    = Seq(fullWarp("spawn"), warp("hub"))
+    warps.foreach(w => result(a.setWarp(w)))
+    result(a.exportStorageData())
+
+    result(a.removeWarp("spawn"))
+    result(a.setWarp(warp("added later")))
+    result(a.importStorageData())
+
+    val expected = warps.map(w => w.name -> w).toMap
+    assertEquals(a.allWarps, expected)
+    eventually()(b.allWarps == expected)
+  }
+
+  test("an export can be imported into another database") {
+    val a     = startWarpServer(migratedDatabase())
+    val warps = Seq(fullWarp("spawn"), warp("hub"))
+    warps.foreach(w => result(a.setWarp(w)))
+    result(a.exportStorageData())
+
+    val c = startWarpServer(migratedDatabase(), "c")
+    Files.copy(a.exportImportPath, c.exportImportPath)
+    result(c.importStorageData())
+
+    assertEquals(c.allWarps, warps.map(w => w.name -> w).toMap)
+  }
+
+  test("importing a broken file fails, and changes nothing") {
+    val database = migratedDatabase()
+    val a        = startWarpServer(database)
+    result(a.setWarp(warp("spawn")))
+    Files.writeString(a.exportImportPath, "{\"warps\": [{\"name\": \"half a warp\"}]}")
+
+    intercept[Exception](result(a.importStorageData()))
+    assertEquals(a.allWarps.keySet, Set("spawn"))
+    assertEquals(startWarpServer(database, "b").allWarps.keySet, Set("spawn"))
+  }
+

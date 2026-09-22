@@ -64,7 +64,14 @@ private class PostgresCached[A <: AnyRef](
         .foreach { notification =>
           val handle = parser.decode[CachedPostgresUpdate](notification.value) match {
             case Right(CachedPostgresUpdate(operation, payload)) => IO(applyUpdate(operation, payload))
-            case Left(e)                                         => IO(sc.logger.error(e.getMessage, e))
+            case Left(e) =>
+              IO {
+                sc.logger.warn(
+                  s"Couldn't parse notification on $postgresChannel, refreshing instead. Notification: ${notification.value}",
+                  e
+                )
+                refreshNow()
+              }
           }
 
           handle.handleError(e => sc.logger.error(s"Failed to handle notification on $postgresChannel", e))

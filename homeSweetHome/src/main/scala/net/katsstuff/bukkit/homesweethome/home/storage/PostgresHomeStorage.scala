@@ -90,15 +90,14 @@ class PostgresHomeStorage(
       owner.map(o => _.filter(_.owner === o.as(uuid)))
     )
 
-    FutureOrNow.fromFuture(
-      Select(
-        filters2.flatten
-          .foldLeft(Query.from(HomeK.table))((q, f) => f(q))
-          .orderBy(h => distanceToPlayerSq2(h).asc)
-          .drop(drop)
-          .take(take)
-      ).run
-    )
+    val sorted = filters2.flatten
+      .foldLeft(Query.from(HomeK.table))((q, f) => f(q))
+      .orderBy(h => distanceToPlayerSq2(h).asc)
+    val dropped = if drop > 0 then sorted.drop(drop) else sorted
+    // A negative take means everything
+    val taken = if take >= 0 then dropped.take(take) else dropped
+
+    FutureOrNow.fromFuture(Select(taken).run)
 
   extension [A](v: Many[A])
     private def arrayAgg: DbValue[Seq[A]] =
@@ -109,7 +108,8 @@ class PostgresHomeStorage(
               .array[A](
                 a => elemType.codec.encode(a).head.get,
                 s => elemType.codec.decode(0, List(Some(s))).left.map(_.message),
-                elemType.codec.types.head
+                // The type of the array, not of the elements
+                skunk.data.Type(s"_${elemType.codec.types.head.name}", List(elemType.codec.types.head))
               )
               .imap(arr => Seq.tabulate(arr.size)(arr.get(_).get))(seq => skunk.data.Arr(seq*)),
             _.opt

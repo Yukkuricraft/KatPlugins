@@ -56,10 +56,18 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
       ()
     }(using plugin.serverThreadExecutionContext)
 
-  protected val homeMapCache: mutable.Map[(UUID, String), Any] =
-    CacheBuilder.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build[(UUID, String), Any]().asMap().asScala
+  // Lookups for players that aren't online, keyed by the owner and the lookup with its arguments
+  protected val homeMapCache: mutable.Map[(UUID, Any), Any] =
+    CacheBuilder.newBuilder().expireAfterWrite(3, TimeUnit.SECONDS).build[(UUID, Any), Any]().asMap().asScala
 
-  private def homeMapImpl[A](owner: UUID, cacheKey: String)(ifPresent: => A)(ifMissing: => Future[A]): FutureOrNow[A] =
+  /** Forgets the cached lookups for a player, both now and when the change is saved. */
+  private def invalidateCache(owner: UUID, change: Future[Unit]): Unit =
+    def invalidate(): Unit = homeMapCache.keys.filter(_._1 == owner).foreach(homeMapCache.remove)
+    
+    invalidate()
+    change.onComplete(_ => invalidate())
+
+  private def homeMapImpl[A](owner: UUID, cacheKey: Any)(ifPresent: => A)(ifMissing: => Future[A]): FutureOrNow[A] =
     if homeMap.containsOuter(owner) then FutureOrNow.now(ifPresent)
     else
       homeMapCache.get((owner, cacheKey)) match {
@@ -78,7 +86,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
   def fetchSpecificHome(uuid: UUID, name: String): Future[Option[Home]]
 
   override def specificHome(homeOwner: UUID, homeName: String): FutureOrNow[Option[Home]] =
-    homeMapImpl(homeOwner, "specificHome")(homeMap.get(homeOwner, homeName))(fetchSpecificHome(homeOwner, homeName))
+    homeMapImpl(homeOwner, ("specificHome", homeName))(homeMap.get(homeOwner, homeName))(fetchSpecificHome(homeOwner, homeName))
 
   def fetchHomeCount(uuid: UUID): Future[Int]
 
@@ -88,7 +96,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
   def fetchHomeExist(uuid: UUID, name: String): Future[Boolean]
 
   override def homeExist(homeOwner: UUID, homeName: String): FutureOrNow[Boolean] =
-    homeMapImpl(homeOwner, "homeExist")(homeMap.contains(homeOwner, homeName))(fetchHomeExist(homeOwner, homeName))
+    homeMapImpl(homeOwner, ("homeExist", homeName))(homeMap.contains(homeOwner, homeName))(fetchHomeExist(homeOwner, homeName))
 
   def saveHome(home: Home): Future[Unit]
 
@@ -96,6 +104,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
     val newHomeK = HomeK.makeNew(homeOwner, homeName, location)
 
     val res = saveHome(newHomeK)
+    invalidateCache(homeOwner, res)
 
     if homeMap.containsOuter(homeOwner) then homeMap.put(homeOwner, homeName, newHomeK)
 
@@ -105,6 +114,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
 
   override def deleteHome(homeOwner: UUID, homeName: String): FutureOrNow[Unit] =
     val res = deleteSavedHome(homeOwner, homeName)
+    invalidateCache(homeOwner, res)
 
     if homeMap.containsOuter(homeOwner) then homeMap.remove(homeOwner, homeName)
     if residentsMap.containsOuter(homeOwner) then residentsMap.remove(homeOwner, homeName)
@@ -121,14 +131,14 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
   def fetchGetHomeResidents(homeOwner: UUID, homeName: String): Future[Set[UUID]]
 
   override def getHomeResidents(homeOwner: UUID, homeName: String): FutureOrNow[Set[UUID]] =
-    homeMapImpl(homeOwner, "getHomeResidents")(residentsMap.getOrElse(homeOwner, homeName, Set.empty))(
+    homeMapImpl(homeOwner, ("getHomeResidents", homeName))(residentsMap.getOrElse(homeOwner, homeName, Set.empty))(
       fetchGetHomeResidents(homeOwner, homeName)
     )
 
   def fetchIsPlayerResident(homeOwner: UUID, homeName: String, player: UUID): Future[Boolean]
 
   override def isPlayerResident(homeOwner: UUID, homeName: String, player: UUID): FutureOrNow[Boolean] =
-    homeMapImpl(homeOwner, "isPlayerResident")(residentsMap.getOrElse(homeOwner, homeName, Set.empty).contains(player))(
+    homeMapImpl(homeOwner, ("isPlayerResident", homeName, player))(residentsMap.getOrElse(homeOwner, homeName, Set.empty).contains(player))(
       fetchIsPlayerResident(homeOwner, homeName, player)
     )
 
@@ -136,6 +146,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
 
   override def addResident(homeOwner: UUID, homeName: String, resident: UUID): FutureOrNow[Unit] =
     val res = saveResident(Resident[Id](homeOwner, homeName, resident, Instant.now()))
+    invalidateCache(homeOwner, res)
 
     if homeMap.containsOuter(homeOwner) then
       residentsMap.updateWith(homeOwner, homeName)(residents => Some(residents.getOrElse(Set.empty) + resident))
@@ -146,6 +157,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
 
   override def removeResident(homeOwner: UUID, homeName: String, resident: UUID): FutureOrNow[Unit] =
     val res = removeSavedResident(homeOwner, homeName, resident)
+    invalidateCache(homeOwner, res)
 
     if homeMap.containsOuter(homeOwner) then
       residentsMap.updateWith(homeOwner, homeName)(residents => Some(residents.getOrElse(Set.empty) - resident))

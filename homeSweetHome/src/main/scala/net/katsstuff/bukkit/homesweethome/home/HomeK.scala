@@ -1,5 +1,6 @@
 package net.katsstuff.bukkit.homesweethome.home
 
+import java.time.temporal.ChronoUnit
 import java.time.{Instant, ZoneOffset}
 import java.util.UUID
 
@@ -60,7 +61,8 @@ object HomeK:
   def makeNew(owner: UUID, name: String, x: Double, y: Double, z: Double, yaw: Float, pitch: Float, world: World)(
       using config: HSHConfig
   ): HomeK[Id] =
-    val now = Instant.now()
+    // Postgres only keeps microseconds. Truncating means a home is equal to itself when read back
+    val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
     HomeK(owner, name, now, now, x, y, z, yaw, pitch, world.getUID, config.serverName)
 
   def makeNew(owner: UUID, name: String, location: Location)(using HSHConfig): HomeK[Id] =

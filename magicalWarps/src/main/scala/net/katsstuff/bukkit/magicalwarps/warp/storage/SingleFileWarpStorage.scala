@@ -52,8 +52,6 @@ class SingleFileWarpStorage(storagePath: Path)(using plugin: WarpsPlugin, config
 
   override def allWarps: Map[String, Warp] = warpMap.toMap
 
-  override def getWarp(name: String): Option[Warp] = allWarps.get(lowercase(name))
-
   override def setWarp(warp: Warp): FutureOrNow[Unit] =
     val oldWarp = warpMap.get(warp.name)
     warpMap.update(warp.name, warp)

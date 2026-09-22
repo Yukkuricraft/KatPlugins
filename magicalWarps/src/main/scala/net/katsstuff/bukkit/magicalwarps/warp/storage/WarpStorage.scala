@@ -46,7 +46,7 @@ trait WarpStorage {
     )
 
   /** Get a warp by name. */
-  def getWarp(name: String): Option[Warp] = allWarps.get(lowercase(name))
+  def getWarp(name: String): Option[Warp] = allWarps.get(name)
 
   /** Set or update a warp */
   def setWarp(warp: Warp): FutureOrNow[Unit]

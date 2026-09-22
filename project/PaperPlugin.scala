@@ -99,7 +99,7 @@ object PaperPlugin extends AutoPlugin {
         Stream
           .continually(istream.getNextJarEntry)
           .takeWhile(_ != null)
-          .filterNot(_.getName.endsWith(".tasty"))
+          .filterNot(e => e.getName.endsWith(".tasty") || includedJarFiles.contains(e.getName))
           .foreach { iJarEntry =>
             ostream.putNextEntry(new JarEntry(iJarEntry))
             IO.transfer(istream, ostream)

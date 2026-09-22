@@ -67,7 +67,7 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
         case None =>
           val f = ifMissing
           f.foreach(a => homeMapCache.put((owner, cacheKey), a))
-          FutureOrNow.fromFuture(ifMissing)
+          FutureOrNow.fromFuture(f)
       }
 
   def fetchAllHomesForPlayer(uuid: UUID): Future[Map[String, Home]]
@@ -195,5 +195,6 @@ trait CachedHomeStorage(implicit plugin: HomePlugin, ec: ExecutionContext, hshCo
   @EventHandler(ignoreCancelled = true)
   def onPlayerLeave(event: PlayerQuitEvent): Unit =
     homeMap.removeInner(event.getPlayer.getUniqueId)
+    residentsMap.removeInner(event.getPlayer.getUniqueId)
     println(s"Removing ${event.getPlayer.getName} from player cache")
 }

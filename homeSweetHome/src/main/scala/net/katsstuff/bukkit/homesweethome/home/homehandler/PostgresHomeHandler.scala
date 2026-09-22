@@ -79,67 +79,61 @@ class PostgresHomeHandler(storage: HomeStorage, sessionPool: Resource[IO, Sessio
     )
 
   private val requests = PostgresCached.postgresNotify[NestedMap[UUID, UUID, Home]](
-    () => {
-      Delete
-        .from(RequestK.table)
-        .where(r => r.expires >= OffsetDateTime.now().as(timestamptz))
-        .run
-
+    () =>
       FutureOrNow.fromFuture(
-        Select(
-          Query.from(RequestK.table).where(_.expires < OffsetDateTime.now().as(timestamptz))
-        ).run.map { res =>
-          seqToNestedMap(res.map(i => (i.requester, i.homeOwner, i.home.as[Home])))
-        }
-      )
-    },
+        Delete
+          .from(RequestK.table)
+          .where(r => r.expires < OffsetDateTime.now().as(timestamptz))
+          .run
+          .flatMap(_ => Select(Query.from(RequestK.table)).run)
+          .map { res =>
+            seqToNestedMap(res.map(i => (i.requester, i.homeOwner, i.home.as[Home])))
+          }
+      ),
     60.seconds,
     "homesweethome_requests_change",
     sessionPool,
     onCreate = Some((old, json) =>
       for
         requester <- json.hcursor.get[UUID]("requester")
-        homeOwner <- json.hcursor.get[UUID]("homeOwner")
+        homeOwner <- json.hcursor.get[UUID]("home_owner")
         home      <- json.hcursor.get[Home]("home")
       yield { old.update(requester, homeOwner, home); old }
     ),
     onDelete = Some((old, json) =>
       for
         requester <- json.hcursor.get[UUID]("requester")
-        homeOwner <- json.hcursor.get[UUID]("homeOwner")
+        homeOwner <- json.hcursor.get[UUID]("home_owner")
       yield { old.remove(requester, homeOwner); old }
     )
   )
 
   private val invites = PostgresCached.postgresNotify[NestedMap[UUID, UUID, Home]](
-    () => {
-      Delete
-        .from(InviteK.table)
-        .where(r => r.expires >= OffsetDateTime.now().as(timestamptz))
-        .run
-
+    () =>
       FutureOrNow.fromFuture(
-        Select(
-          Query.from(InviteK.table).where(_.expires < OffsetDateTime.now().as(timestamptz))
-        ).run.map { res =>
-          seqToNestedMap(res.map(i => (i.target, i.homeOwner, i.home.as[Home])))
-        }
-      )
-    },
+        Delete
+          .from(InviteK.table)
+          .where(r => r.expires < OffsetDateTime.now().as(timestamptz))
+          .run
+          .flatMap(_ => Select(Query.from(InviteK.table)).run)
+          .map { res =>
+            seqToNestedMap(res.map(i => (i.target, i.homeOwner, i.home.as[Home])))
+          }
+      ),
     60.seconds,
     "homesweethome_invites_change",
     sessionPool,
     onCreate = Some((old, json) =>
       for
         requester <- json.hcursor.get[UUID]("target")
-        homeOwner <- json.hcursor.get[UUID]("homeOwner")
+        homeOwner <- json.hcursor.get[UUID]("home_owner")
         home      <- json.hcursor.get[Home]("home")
       yield { old.update(requester, homeOwner, home); old }
     ),
     onDelete = Some((old, json) =>
       for
         requester <- json.hcursor.get[UUID]("target")
-        homeOwner <- json.hcursor.get[UUID]("homeOwner")
+        homeOwner <- json.hcursor.get[UUID]("home_owner")
       yield { old.remove(requester, homeOwner); old }
     )
   )

@@ -20,6 +20,7 @@ import net.katsstuff.bukkit.homesweethome.HSHConfig.{CrossServerCommunication, S
 import net.katsstuff.bukkit.homesweethome.cmd.*
 import net.katsstuff.bukkit.homesweethome.home.homehandler.{HomeHandler, PostgresHomeHandler, SingleServerHomeHandler}
 import net.katsstuff.bukkit.homesweethome.home.storage.{
+  CachedHomeStorage,
   HomeStorage,
   MultiFileHomeStorage,
   PostgresHomeStorage,
@@ -30,6 +31,7 @@ import net.katsstuff.bukkit.katlib.db.{CrossServerPostgresTeleporter, DbUpdates,
 import net.katsstuff.bukkit.katlib.util.Teleporter
 import net.katsstuff.bukkit.katlib.{BungeeChannel, ScalaPlugin}
 import org.bukkit.Bukkit
+import org.bukkit.event.HandlerList
 import skunk.Session
 
 class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
@@ -111,7 +113,7 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
         val storagePath = dataFolder.toPath.resolve("storage")
         Files.createDirectories(storagePath)
         val storage = new MultiFileHomeStorage(storagePath)
-        Bukkit.getPluginManager.registerEvents(storage, this)
+        registerStorageListener(storage)
         storage
 
       case StorageType.Postgres =>
@@ -122,8 +124,15 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
           case None => throw new Exception("Misssing database configuration for Postgres storage")
         }
 
-        Bukkit.getPluginManager.registerEvents(storage, this)
+        registerStorageListener(storage)
         storage
+
+  private def registerStorageListener(storage: CachedHomeStorage): Unit =
+    Bukkit.getPluginManager.registerEvents(storage, this)
+    addDisableAction {
+      HandlerList.unregisterAll(storage)
+      storage.close()
+    }
 
   // noinspection UnstableApiUsage
   def setup(ignoreOneTime: Boolean): Unit =
@@ -154,6 +163,7 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
             Bukkit.getPluginManager.registerEvents(handler, this)
 
             addDisableAction {
+              HandlerList.unregisterAll(handler)
               handler.close()
             }
 
@@ -168,7 +178,16 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
-            CrossServerPostgresTeleporter(pool, hshConfig.serverName, "homesweethome_delayed_teleport_change")
+            val postgresTeleporter =
+              CrossServerPostgresTeleporter(pool, hshConfig.serverName, "homesweethome_delayed_teleport_change")
+            Bukkit.getPluginManager.registerEvents(postgresTeleporter, this)
+
+            addDisableAction {
+              HandlerList.unregisterAll(postgresTeleporter)
+              postgresTeleporter.close()
+            }
+
+            postgresTeleporter
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
         }
 

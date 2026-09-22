@@ -141,7 +141,9 @@ class PostgresHomeStorage(
       Query.of(
         Query
           .from(ResidentK.table)
-          .filter(r => r.owner === homeOwner.as(uuid) && r.homeName === homeName.as(text))
+          .filter { r =>
+            r.owner === homeOwner.as(uuid) && r.homeName === homeName.as(text) && r.resident === player.as(uuid)
+          }
           .nonEmpty
       )
     ).runOne
@@ -152,7 +154,9 @@ class PostgresHomeStorage(
   override def removeSavedResident(homeOwner: UUID, homeName: String, resident: UUID): Future[Unit] =
     Delete
       .from(ResidentK.table)
-      .where(r => r.owner === homeOwner.as(uuid) && r.homeName === homeName.as(text))
+      .where { r =>
+        r.owner === homeOwner.as(uuid) && r.homeName === homeName.as(text) && r.resident === resident.as(uuid)
+      }
       .run
       .map(_ => ())
 

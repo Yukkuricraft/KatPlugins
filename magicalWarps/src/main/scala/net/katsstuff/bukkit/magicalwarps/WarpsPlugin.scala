@@ -129,8 +129,9 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
     val bungeeChannelVal               = new BungeeChannel()
     given bungeeChannel: BungeeChannel = bungeeChannelVal
 
-    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "bungeecord:magicalwarps")
-    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:magicalwarps", bungeeChannel)
+    // BungeeChannel talks to the proxy on its channel, which plugins must register to be allowed to send on
+    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "BungeeCord")
+    this.getServer.getMessenger.registerIncomingPluginChannel(this, "BungeeCord", bungeeChannel)
 
     addDisableAction {
       this.getServer.getMessenger.unregisterOutgoingPluginChannel(this)

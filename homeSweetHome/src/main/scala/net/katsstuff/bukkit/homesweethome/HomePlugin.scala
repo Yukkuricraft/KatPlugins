@@ -150,8 +150,9 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
     context.bungeeChannel = new BungeeChannel()
     given BungeeChannel = context.bungeeChannel
 
-    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "bungeecord:homesweethome")
-    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:homesweethome", context.bungeeChannel)
+    // BungeeChannel talks to the proxy on its channel, which plugins must register to be allowed to send on
+    this.getServer.getMessenger.registerOutgoingPluginChannel(this, "BungeeCord")
+    this.getServer.getMessenger.registerIncomingPluginChannel(this, "BungeeCord", context.bungeeChannel)
 
     addDisableAction {
       this.getServer.getMessenger.unregisterOutgoingPluginChannel(this)

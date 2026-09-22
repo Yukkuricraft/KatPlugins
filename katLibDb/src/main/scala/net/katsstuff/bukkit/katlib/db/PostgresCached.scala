@@ -1,6 +1,7 @@
 package net.katsstuff.bukkit.katlib.db
 
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.mutable
 import scala.compiletime.uninitialized
@@ -90,9 +91,13 @@ private class PostgresCached[A <: AnyRef](
 
     if !applied then refreshNow()
 
+  private val closed = new AtomicBoolean(false)
+
+  // Closing twice would return the session to the pool twice
   override def close(): Unit =
-    super.close()
-    sc.dispatcher.unsafeRunSync(closeIo)
+    if closed.compareAndSet(false, true) then
+      super.close()
+      sc.dispatcher.unsafeRunSync(closeIo)
 }
 object PostgresCached:
   private case class CachedPostgresUpdate(action: String, payload: Json) derives Decoder

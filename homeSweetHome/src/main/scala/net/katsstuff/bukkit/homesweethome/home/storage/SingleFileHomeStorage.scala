@@ -112,20 +112,23 @@ class SingleFileHomeStorage(storagePath: Path)(implicit plugin: HomePlugin, hshC
       drop: Int,
       take: Int
   ): FutureOrNow[Seq[Home]] =
-    FutureOrNow.now(
-      homeMap.toNormalMap
-        .collect {
-          case (ownerId, homes) if owner.forall(_ == ownerId) =>
-            homes.values.filter { home =>
-              world.forall(_ == home.worldUuid) && radius.forall { r =>
-                inline def square(d: Double): Double = d * d
-                square(home.x - location.getX) + square(home.y - location.getY) + square(home.z - location.getZ) < r * r
-              }
-            }
-        }
-        .flatten
-        .toSeq
-    )
+    inline def square(d: Double): Double = d * d
+    
+    def distanceSq(home: Home): Double =
+      square(home.x - location.getX) + square(home.y - location.getY) + square(home.z - location.getZ)
+
+    val sorted = homeMap.toNormalMap
+      .collect {
+        case (ownerId, homes) if owner.forall(_ == ownerId) =>
+          homes.values.filter { home =>
+            world.forall(_ == home.worldUuid) && radius.forall(r => distanceSq(home) < r * r)
+          }
+      }
+      .flatten
+      .toSeq
+      .sortBy(distanceSq)
+    val dropped = sorted.drop(drop)
+    FutureOrNow.now(if take >= 0 then dropped.take(take) else dropped)
 
   override def homeOwners: Set[UUID] = homeMap.toNormalMap.keySet
 

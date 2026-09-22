@@ -7,12 +7,13 @@ import scala.concurrent.duration.*
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
+import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import dataprism.KMacros
 import dataprism.skunk.platform.PostgresSkunkPlatform.Api.*
 import dataprism.skunk.sql.SkunkTypes.*
 import dataprism.sql.*
-import io.circe.DecodingFailure
+import io.circe.{ACursor, Decoder}
 import net.katsstuff.bukkit.katlib.db.CrossServerPostgresTeleporter.DelayedTeleportK
 import net.katsstuff.bukkit.katlib.text.*
 import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
@@ -67,7 +68,11 @@ object CrossServerPostgresTeleporter:
     extension (tp: DelayedTeleportK[perspective.Id])
       def toLocation: Location = new Location(null, tp.x, tp.y, tp.z, tp.yaw, tp.pitch)
 
-class CrossServerPostgresTeleporter(sessionPool: Resource[IO, Session[IO]], currentServerName: String)(
+class CrossServerPostgresTeleporter(
+    sessionPool: Resource[IO, Session[IO]],
+    currentServerName: String,
+    postgresChannel: String
+)(
     using dbPlugin: ScalaDbPlugin,
     bungeeChannel: BungeeChannel,
     db: Db[Future, Codec],
@@ -78,78 +83,66 @@ class CrossServerPostgresTeleporter(sessionPool: Resource[IO, Session[IO]], curr
   private val sameServerHandler    = new Teleporter.SameServerTeleporter(currentServerName)
   given SqlOrdered[OffsetDateTime] = SqlOrdered.defaultInstance[OffsetDateTime]
 
+  private def now: DbValue[OffsetDateTime] = OffsetDateTime.now().as(timestamptz)
+
   private val cached = PostgresCached.postgresNotify[DelayedTeleportK.type](
     () =>
       FutureOrNow.now {
         Delete
           .from(DelayedTeleportK.table)
-          .where(d => d.expires >= OffsetDateTime.now().as(timestamptz))
+          .where(_.expires < now)
           .run
-
-        Select(
-          Query
-            .from(DelayedTeleportK.table)
-            .where { d =>
-              d.server === currentServerName
-                .as(text) && d.expires < OffsetDateTime.now().as(timestamptz)
-            }
-        ).run.foreach { res =>
-          res.foreach { tp =>
-            Option(Bukkit.getPlayer(tp.uuid)).foreach { player =>
-              sameServerHandler
-                .teleportReportingError(
-                  GlobalPlayer.OnThisServer(player),
-                  tp.toLocation,
-                  tp.worldUuid,
-                  currentServerName
-                )
-                .foreach { _ =>
-                  Delete
-                    .from(DelayedTeleportK.table)
-                    .where(d => d.server === currentServerName.as(text) && d.uuid === player.getUniqueId.as(uuid))
-                    .run
-                }
-            }
+          .flatMap { _ =>
+            Select(Query.from(DelayedTeleportK.table).where(_.server === currentServerName.as(text))).run
           }
-        }
+          .foreach(_.foreach(tp => runDelayedTeleport(tp.uuid, tp.toLocation, tp.worldUuid)))
+
         DelayedTeleportK
       },
     60.seconds,
-    "HomeSweetHome.DelayedTeleportChange",
+    postgresChannel,
     sessionPool,
-    onCreate = Some((old, json) =>
-      if json.hcursor.get[String]("server").contains(currentServerName) then
-        val h = json.hcursor
-
-        for
-          uuidV     <- h.get[UUID]("uuid")
-          player    <- Option(Bukkit.getPlayer(uuidV)).toRight(DecodingFailure.apply("Player not found", h.history))
-          x         <- h.get[Double]("x")
-          y         <- h.get[Double]("y")
-          z         <- h.get[Double]("z")
-          yaw       <- h.get[Float]("pitch")
-          pitch     <- h.get[Float]("pitch")
-          worldUuid <- h.get[UUID]("world_uuid")
-        yield
-          val location = new Location(null, x, y, z, yaw, pitch)
-          sameServerHandler
-            .teleportReportingError(
-              GlobalPlayer.OnThisServer(player),
-              location,
-              worldUuid,
-              currentServerName
-            )
-            .foreach { _ =>
-              Delete
-                .from(DelayedTeleportK.table)
-                .where(d => d.server === currentServerName.as(text) && d.uuid === uuidV.as(uuid))
-                .run
-            }
-
-          old
-      else Right(old)
-    )
+    onCreate = Some((old, json) => onNewDelayedTeleport(json.hcursor).map(_ => old)),
+    onUpdate = Some((old, json) => onNewDelayedTeleport(json.hcursor.downField("new")).map(_ => old)),
+    onDelete = Some((old, _) => Right(old))
   )
+
+  private def onNewDelayedTeleport(h: ACursor): Decoder.Result[Unit] =
+    if !h.get[String]("server").contains(currentServerName) then Right(())
+    else
+      for
+        uuidV     <- h.get[UUID]("uuid")
+        x         <- h.get[Double]("x")
+        y         <- h.get[Double]("y")
+        z         <- h.get[Double]("z")
+        yaw       <- h.get[Float]("yaw")
+        pitch     <- h.get[Float]("pitch")
+        worldUuid <- h.get[UUID]("world_uuid")
+      yield runDelayedTeleport(uuidV, new Location(null, x, y, z, yaw, pitch), worldUuid)
+
+  /**
+    * Teleports the player if they are online on this server, and then removes
+    * the delayed teleport. Can be called from any thread.
+    */
+  private def runDelayedTeleport(playerUuid: UUID, destination: Location, worldUuid: UUID): Unit =
+    if dbPlugin.isEnabled then
+      dbPlugin.serverThreadExecutionContext.execute { () =>
+        Option(Bukkit.getPlayer(playerUuid)).foreach { player =>
+          sameServerHandler.teleportReportingError(
+            GlobalPlayer.OnThisServer(player),
+            destination,
+            worldUuid,
+            currentServerName
+          )
+
+          Delete
+            .from(DelayedTeleportK.table)
+            .where(d => d.server === currentServerName.as(text) && d.uuid === playerUuid.as(uuid))
+            .run
+            .failed
+            .foreach(e => dbPlugin.logger.error("Failed to remove delayed teleport", e))
+        }
+      }
 
   override def close(): Unit = cached.close()
 
@@ -157,24 +150,18 @@ class CrossServerPostgresTeleporter(sessionPool: Resource[IO, Session[IO]], curr
   def onPlayerJoin(event: PlayerJoinEvent): Unit =
     val player = event.getPlayer
 
-    Select(
+    val res = Select(
       Query
         .from(DelayedTeleportK.table)
         .where { d =>
           d.uuid === player.getUniqueId.as(uuid) &&
           d.server === currentServerName.as(text) &&
-          d.expires < OffsetDateTime.now().as(timestamptz)
+          d.expires >= now
         }
-    ).runMaybeOne[Future].foreach { res =>
-      res.foreach { tp =>
-        sameServerHandler.teleportReportingError(
-          GlobalPlayer.OnThisServer(player),
-          tp.toLocation,
-          tp.worldUuid,
-          currentServerName
-        )
-      }
-    }
+    ).runMaybeOne[Future]
+
+    res.foreach(_.foreach(tp => runDelayedTeleport(tp.uuid, tp.toLocation, tp.worldUuid)))
+    res.failed.foreach(e => dbPlugin.logger.error("Failed to look up delayed teleport", e))
 
   private def makeDelayedTeleport(toTeleport: UUID, destination: Location, worldUuid: UUID, server: String): Unit =
     if server == currentServerName && Bukkit.getPlayer(toTeleport) != null then
@@ -200,7 +187,10 @@ class CrossServerPostgresTeleporter(sessionPool: Resource[IO, Session[IO]], curr
             OffsetDateTime.now().plusMinutes(1)
           )
         )
+        .onConflictUpdate(t => NonEmptyList.one(t.uuid))
         .run
+        .failed
+        .foreach(e => dbPlugin.logger.error("Failed to save delayed teleport", e))
 
   override def teleport(
       player: GlobalPlayer,

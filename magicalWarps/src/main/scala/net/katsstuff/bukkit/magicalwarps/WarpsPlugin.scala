@@ -140,7 +140,7 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
-            CrossServerPostgresTeleporter(pool, warpsConfig.serverName)
+            CrossServerPostgresTeleporter(pool, warpsConfig.serverName, "magicalwarps_delayed_teleport_change")
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
         }
 

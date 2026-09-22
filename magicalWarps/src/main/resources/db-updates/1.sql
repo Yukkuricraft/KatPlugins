@@ -62,4 +62,4 @@ CREATE TRIGGER delayed_teleports_notify
     AFTER INSERT OR UPDATE OR DELETE
     ON delayed_teleports
     FOR EACH ROW
-EXECUTE PROCEDURE notify_trigger('MagicalWarps.DelayedTeleportChange');
+EXECUTE PROCEDURE notify_trigger('magicalwarps_delayed_teleport_change');

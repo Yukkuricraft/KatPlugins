@@ -67,6 +67,14 @@ class SingleFileWarpStorage(storagePath: Path)(using plugin: WarpsPlugin, config
     removeMarker(name)
     save()
 
+  override def renameWarp(warp: Warp, newName: String): FutureOrNow[Unit] =
+    val renamed: Warp = warp.copy(name = newName)
+    warpMap.remove(warp.name)
+    warpMap.update(newName, renamed)
+    removeMarker(warp.name)
+    addMarker(renamed)
+    save()
+
   override def exportImportPath: Path = plugin.exportImportPath
 
   override def exportData(): FutureOrNow[Seq[Warp]] =

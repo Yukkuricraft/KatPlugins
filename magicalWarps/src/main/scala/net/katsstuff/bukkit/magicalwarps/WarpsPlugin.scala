@@ -27,6 +27,7 @@ import net.katsstuff.bukkit.magicalwarps.WarpsConfig.{CrossServerCommunication, 
 import net.katsstuff.bukkit.magicalwarps.cmd.*
 import net.katsstuff.bukkit.magicalwarps.warp.storage.{SingleFileWarpStorage, WarpStorage}
 import org.bukkit.Bukkit
+import org.bukkit.event.HandlerList
 import skunk.Session
 
 class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
@@ -140,7 +141,16 @@ class WarpsPlugin extends ScalaPlugin, ScalaDbPlugin {
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
-            CrossServerPostgresTeleporter(pool, warpsConfig.serverName, "magicalwarps_delayed_teleport_change")
+            val postgresTeleporter =
+              CrossServerPostgresTeleporter(pool, warpsConfig.serverName, "magicalwarps_delayed_teleport_change")
+            Bukkit.getPluginManager.registerEvents(postgresTeleporter, this)
+
+            addDisableAction {
+              HandlerList.unregisterAll(postgresTeleporter)
+              postgresTeleporter.close()
+            }
+
+            postgresTeleporter
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
         }
 

@@ -312,15 +312,19 @@ object Commands {
                 Right(())
               }
           },
-          execution(
+          asyncExecution(
             param ~ "rename" ~ Parameters.string,
             Senders.commandSender,
             permissions = LibPerm.Rename,
             description = _ => Some(t"Rename a warp")
           ) { case (sender, warp ~ _ ~ newName) =>
-            warpStorage.setWarp(warp.copy(name = newName))
-            sender.sendMessage(t"${Green}Renamed $Aqua${warp.name}$Green to $Aqua$newName")
-            Right(())
+            if warpStorage.allWarps.contains(newName) then
+              FutureOrNow.now(Left(s"A warp named $newName already exists"))
+            else
+              warpStorage.renameWarp(warp, newName).map { _ =>
+                sender.sendMessage(t"${Green}Renamed $Aqua${warp.name}$Green to $Aqua$newName")
+                Right(())
+              }
           },
           asyncExecution(
             param ~ "displayname" ~ Parameters.remainingAsString,

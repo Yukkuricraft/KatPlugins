@@ -54,6 +54,12 @@ trait WarpStorage {
   /** Remove an existing warp. */
   def removeWarp(name: String): FutureOrNow[Unit]
 
+  /**
+    * Rename an existing warp. Callers should make sure no warp named newName
+    * exists already.
+    */
+  def renameWarp(warp: Warp, newName: String): FutureOrNow[Unit]
+
   /** Where data should be exported to and imported from. */
   def exportImportPath: Path
 

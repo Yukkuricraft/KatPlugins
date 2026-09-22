@@ -40,10 +40,13 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
 
   given plugin: HomePlugin = this
 
-  private var hshConfig: HSHConfig = uninitialized
   private var storage: HomeStorage = uninitialized
 
-  given HSHConfig = hshConfig
+  val context: HSHContext = new HSHContext
+  given HSHContext        = context
+
+  // Inline so that it always reads the current config (a plain alias given is a cached lazy val)
+  private inline given HSHConfig = context.config
 
   def exportImportPath: Path = dataFolder.toPath.resolve("export.json")
 
@@ -60,10 +63,10 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
 
   def makeStorage(): HomeStorage =
     dbObjs =
-      if !hshConfig.storage.postgres.use then None
+      if !context.config.storage.postgres.use then None
       else
         Some {
-          val dbConfig      = hshConfig.storage.postgres
+          val dbConfig      = context.config.storage.postgres
           given Network[IO] = Network.forIO
 
           dispatcher.unsafeRunSync(
@@ -107,7 +110,7 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
           (sessions, db)
         }
 
-    hshConfig.storage.`type` match
+    context.config.storage.`type` match
       case StorageType.SingleFile => new SingleFileHomeStorage(dataFolder.toPath.resolve("storage.json"))
       case StorageType.MultiFile =>
         val storagePath = dataFolder.toPath.resolve("storage")
@@ -139,23 +142,23 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
     if ignoreOneTime then runKatLibRepeatableSetup()
     else runKatLibSetup()
 
-    hshConfig = loadConfig().get
+    context.config = loadConfig().get
 
     storage = makeStorage()
     storage.reloadHomeData().failed.foreach(logger.error("Failed to reload home data", _))
 
-    val bungeeChannelVal               = new BungeeChannel()
-    given bungeeChannel: BungeeChannel = bungeeChannelVal
+    context.bungeeChannel = new BungeeChannel()
+    given BungeeChannel = context.bungeeChannel
 
     this.getServer.getMessenger.registerOutgoingPluginChannel(this, "bungeecord:homesweethome")
-    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:homesweethome", bungeeChannel)
+    this.getServer.getMessenger.registerIncomingPluginChannel(this, "bungeecord:homesweethome", context.bungeeChannel)
 
     addDisableAction {
       this.getServer.getMessenger.unregisterOutgoingPluginChannel(this)
       this.getServer.getMessenger.unregisterIncomingPluginChannel(this)
     }
 
-    val homeHandlerVal = hshConfig.crossServerCommunication match
+    context.homeHandler = context.config.crossServerCommunication match
       case CrossServerCommunication.Postgres =>
         dbObjs match
           case Some((pool, given Db[Future, skunk.Codec])) =>
@@ -171,15 +174,14 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
           case None => throw new Exception("Misssing database configuration for Postgres cross server communication")
 
       case CrossServerCommunication.Single =>
-        new SingleServerHomeHandler(storage, hshConfig)
-    given HomeHandler = homeHandlerVal
+        new SingleServerHomeHandler(storage, context.config)
 
-    val teleporterVal = hshConfig.crossServerCommunication match {
+    context.teleporter = context.config.crossServerCommunication match {
       case CrossServerCommunication.Postgres =>
         dbObjs match {
           case Some((pool, given Db[Future, skunk.Codec])) =>
             val postgresTeleporter =
-              CrossServerPostgresTeleporter(pool, hshConfig.serverName, "homesweethome_delayed_teleport_change")
+              CrossServerPostgresTeleporter(pool, context.config.serverName, "homesweethome_delayed_teleport_change")
             Bukkit.getPluginManager.registerEvents(postgresTeleporter, this)
 
             addDisableAction {
@@ -192,9 +194,8 @@ class HomePlugin extends ScalaPlugin, ScalaDbPlugin:
         }
 
       case CrossServerCommunication.Single =>
-        Teleporter.SameServerTeleporter(hshConfig.serverName)
+        Teleporter.SameServerTeleporter(context.config.serverName)
     }
-    given Teleporter = teleporterVal
 
     if !ignoreOneTime then
       val homeHelp = new HelpCmd(this)

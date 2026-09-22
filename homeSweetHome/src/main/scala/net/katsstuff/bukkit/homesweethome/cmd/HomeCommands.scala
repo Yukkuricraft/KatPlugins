@@ -14,13 +14,12 @@ import io.papermc.paper.command.brigadier.argument.ArgumentTypes
 import io.papermc.paper.command.brigadier.argument.resolvers.PlayerProfileListResolver
 import net.katsstuff.bukkit.homesweethome.*
 import net.katsstuff.bukkit.homesweethome.home.Home
-import net.katsstuff.bukkit.homesweethome.home.homehandler.HomeHandler
 import net.katsstuff.bukkit.homesweethome.lib.LibPerm
 import net.katsstuff.bukkit.katlib.command.*
 import net.katsstuff.bukkit.katlib.service.PaginationService
 import net.katsstuff.bukkit.katlib.text.*
-import net.katsstuff.bukkit.katlib.util.{FutureOrNow, Teleporter}
-import net.katsstuff.bukkit.katlib.{BungeeChannel, GlobalPlayer, ScalaPlugin}
+import net.katsstuff.bukkit.katlib.util.FutureOrNow
+import net.katsstuff.bukkit.katlib.{GlobalPlayer, ScalaPlugin}
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.event.{ClickCallback, ClickEvent}
@@ -33,32 +32,34 @@ object HomeCommands:
 
   inline def lowercase(s: String): String = s.toLowerCase(Locale.ROOT)
 
-  def homeOwner(using homeHandler: HomeHandler): Parameter[OfflinePlayer] = Parameter.choicesSingleMap(
+  def homeOwner(using ctx: HSHContext): Parameter[OfflinePlayer] = Parameter.choicesSingleMap(
     "home-owner",
-    homeHandler.homeOwnersPlayers
+    ctx.homeHandler.homeOwnersPlayers
   )
 
-  def globalPlayer(using homeHandler: HomeHandler): Parameter[GlobalPlayer] =
+  def globalPlayer(using ctx: HSHContext): Parameter[GlobalPlayer] =
     Parameter.choicesSingleOpt(
       "player",
-      input => homeHandler.globalOnlinePlayers.find(_.name == input),
-      homeHandler.globalOnlinePlayers.map(_.name),
+      input => ctx.homeHandler.globalOnlinePlayers.find(_.name == input),
+      ctx.homeHandler.globalOnlinePlayers.map(_.name),
       showChoicesInUsage = false
     )
 
-  def homeRequester(using homeHandler: HomeHandler): Parameter[(GlobalPlayer, Home)] =
+  def homeRequester(using ctx: HSHContext): Parameter[(GlobalPlayer, Home)] =
     new Parameter.ChoicesSingleSyncParameter[(GlobalPlayer, Home)](
       "home-requester",
       getValue = {
         case (player: Player, input) =>
           Option(Bukkit.getOfflinePlayerIfCached(input)).flatMap { offline =>
-            homeHandler.getRequest(offline.getUniqueId, player.getUniqueId).map(GlobalPlayer.ofOffline(offline) -> _)
+            ctx.homeHandler
+              .getRequest(offline.getUniqueId, player.getUniqueId)
+              .map(GlobalPlayer.ofOffline(offline) -> _)
           }
         case (_, _) => None
       },
       suggestionsChoices = {
         case player: Player =>
-          homeHandler
+          ctx.homeHandler
             .getAllRequestersForPlayer(player.getUniqueId)
             .map(Bukkit.getOfflinePlayer)
             .filter(_.getName != null)
@@ -69,7 +70,7 @@ object HomeCommands:
 
   def manyHomes(
       owner: Option[OfflinePlayer]
-  )(using homeHandler: HomeHandler, ec: ExecutionContext): Parameter[Set[HomeWithName]] =
+  )(using ctx: HSHContext, ec: ExecutionContext): Parameter[Set[HomeWithName]] =
     new Parameter.ChoicesManyParameter[HomeWithName](
       "home",
       choices = sender => {
@@ -79,26 +80,26 @@ object HomeCommands:
 
         owner.orElse(cast[OfflinePlayer](sender)) match
           case Some(player) =>
-            homeHandler.allHomesForPlayer(player.getUniqueId).map(_.map(t => t._1 -> HomeWithName(t._1, t._2)))
+            ctx.homeHandler.allHomesForPlayer(player.getUniqueId).map(_.map(t => t._1 -> HomeWithName(t._1, t._2)))
           case None => FutureOrNow.now(Map.empty)
       }
     )
 
   def homeWithOwner(
       owner: Option[OfflinePlayer]
-  )(using HomeHandler, ExecutionContext): Parameter[HomeWithName] =
+  )(using ctx: HSHContext)(using ExecutionContext): Parameter[HomeWithName] =
     single(manyHomes(owner))
 
-  def home(using HomeHandler, ExecutionContext): Parameter[HomeWithName] =
+  def home(using ctx: HSHContext)(using ExecutionContext): Parameter[HomeWithName] =
     homeWithOwner(None)
 
-  def otherHome(using homeHandler: HomeHandler, ec: ExecutionContext): Parameter[OtherHome] =
+  def otherHome(using ctx: HSHContext, ec: ExecutionContext): Parameter[OtherHome] =
     new Parameter[OtherHome]:
       val homeOwnerParam: Parameter[OfflinePlayer] = homeOwner
       val stringParam: Parameter[String]           = Parameters.string.named("home")
 
       val param: Parameter[OtherHome] = (homeOwnerParam ~ stringParam).aemap { (owner, name) =>
-        homeHandler
+        ctx.homeHandler
           .specificHome(owner.getUniqueId, name)
           .map(
             _.toRight(CommandError(s"""No home named "$name" for ${owner.getName} found"""))
@@ -134,17 +135,17 @@ object HomeCommands:
     makeHomeSearchQueryParameter("r", Parameters.double, r => Right(HomeSearchQuery.Radius(r)))
   val homeSearchQueryWorldParameter: Parameter[HomeSearchQuery[?]] =
     makeHomeSearchQueryParameter("w", Parameters.world, w => Right(HomeSearchQuery.World(w)))
-  def homeSearchQueryOwnerParameter(using HomeHandler): Parameter[HomeSearchQuery[?]] =
+  def homeSearchQueryOwnerParameter(using ctx: HSHContext): Parameter[HomeSearchQuery[?]] =
     makeHomeSearchQueryParameter("o", homeOwner, p => Right(HomeSearchQuery.Owner(p.getUniqueId)))
 
-  def homeSearchParameter(using HomeHandler): Parameter[HomeSearchQuery[?]] =
+  def homeSearchParameter(using ctx: HSHContext): Parameter[HomeSearchQuery[?]] =
     homeSearchQueryRadiusParameter | homeSearchQueryWorldParameter | homeSearchQueryOwnerParameter
 
   val locationSender: UserValidator[Location] =
     case entity: Entity => Right(entity.getLocation)
     case _              => Left(CommandUsageError("User needs to have a location", -1))
 
-  def listExecution(using HomeHandler, ScalaPlugin, ExecutionContext): Executions =
+  def listExecution(using ctx: HSHContext)(using ScalaPlugin, ExecutionContext): Executions =
     asyncExecution(
       sender = Senders.player,
       permissions = LibPerm.HomeList,
@@ -153,7 +154,7 @@ object HomeCommands:
       listHomes(sender, sender, isOther = false)
     }
 
-  def homesCommand(using HomeHandler, HomePlugin, ExecutionContext): Command =
+  def homesCommand(using ctx: HSHContext)(using HomePlugin, ExecutionContext): Command =
     Command("homes")(
       listExecution
     )
@@ -162,11 +163,9 @@ object HomeCommands:
       helpExecution: Executions,
       reloadData: () => Unit
   )(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       plugin: HomePlugin,
-      ec: ExecutionContext,
-      bungeeChannel: BungeeChannel,
-      teleporter: Teleporter
+      ec: ExecutionContext
   ): Command =
     Command("home")(
       asyncExecution(
@@ -267,10 +266,10 @@ object HomeCommands:
         permissions = LibPerm.HomeAccept,
         description = _ => Some(t"Accept a home request")
       ) { case (homeOwner, (requester, home)) =>
-        teleporter.teleport(requester, home.locationWithoutWorld, home.worldUuid, home.server).map { _ =>
-          requester.sendMessage(homeOwner, t"${Yellow}Teleported you to your requested home")
+        ctx.teleporter.teleport(requester, home.locationWithoutWorld, home.worldUuid, home.server).map { _ =>
+          requester.sendMessage(homeOwner, t"${Yellow}Teleported you to your requested home")(using ctx.bungeeChannel)
           homeOwner.sendMessage(t"${Green}Teleported ${requester.name} to their requested home")
-          homeHandler.removeRequest(requester.uuid, homeOwner.getUniqueId)
+          ctx.homeHandler.removeRequest(requester.uuid, homeOwner.getUniqueId)
           ()
         }
       },
@@ -280,27 +279,28 @@ object HomeCommands:
         permissions = LibPerm.HomeGoto,
         description = _ => Some(t"Go to another players home if you are allowed to go there")
       ) { case (player, homeOwner ~ homeName) =>
-        homeHandler
+        ctx.homeHandler
           .specificHome(homeOwner.getUniqueId, homeName)
-          .zip(homeHandler.isPlayerResident(homeOwner.getUniqueId, homeName, player.getUniqueId))
+          .zip(ctx.homeHandler.isPlayerResident(homeOwner.getUniqueId, homeName, player.getUniqueId))
           .map((homeOpt, isResident) =>
             homeOpt.toRight(HomeNotFound).flatMap { home =>
-              val homeOwnerOnline = homeHandler.globalOnlinePlayers.exists(_.uuid == homeOwner.getUniqueId)
+              val homeOwnerOnline = ctx.homeHandler.globalOnlinePlayers.exists(_.uuid == homeOwner.getUniqueId)
 
-              val isInvited  = homeHandler.isInvited(player.getUniqueId, homeOwner.getUniqueId, home) && homeOwnerOnline
+              val isInvited =
+                ctx.homeHandler.isInvited(player.getUniqueId, homeOwner.getUniqueId, home) && homeOwnerOnline
               val canUseGoto = isResident || isInvited
 
               if canUseGoto then
-                teleporter
+                ctx.teleporter
                   .teleport(GlobalPlayer.OnThisServer(player), home.locationWithoutWorld, home.worldUuid, home.server)
                   .map { _ =>
                     player.sendMessage(t"""${Green}Teleported to "$homeName" for ${homeOwner.getName}""")
-                    homeHandler.removeInvite(player.getUniqueId, homeOwner.getUniqueId)
+                    ctx.homeHandler.removeInvite(player.getUniqueId, homeOwner.getUniqueId)
                     ()
                   }
               else if homeOwnerOnline then
                 player.sendMessage(t"""${Green}Sent home request to ${homeOwner.getName} for "$homeName"""")
-                homeHandler.addRequest(player.getUniqueId, homeOwner.getUniqueId, home).foreach { _ =>
+                ctx.homeHandler.addRequest(player.getUniqueId, homeOwner.getUniqueId, home).foreach { _ =>
                   val acceptButton = button(t"${Yellow}Accept", s"/home accept ${player.getName}")
 
                   GlobalPlayer
@@ -309,7 +309,7 @@ object HomeCommands:
                       player,
                       t"${t"""$Yellow${player.getName} has requested a to be teleported to "$homeName".${Component
                             .newline()}"""}$acceptButton"
-                    )
+                    )(using ctx.bungeeChannel)
                 }
 
                 Right(())
@@ -344,7 +344,7 @@ object HomeCommands:
           inline def getProp[Q <: HomeSearchQuery[?]](using tag: ClassTag[Q]): Option[HomeSearchQuery.Tpe[Q]] =
             params.get(tag.runtimeClass.asInstanceOf[Class[Q]]).map(_.value.asInstanceOf[HomeSearchQuery.Tpe[Q]])
 
-          homeHandler
+          ctx.homeHandler
             .searchHomes(
               player.getLocation,
               radius = getProp[HomeSearchQuery.Radius],
@@ -365,7 +365,7 @@ object HomeCommands:
                   t"[${t"${Yellow}Teleport"}]".clickEvent(
                     ClickEvent.callback(
                       (_: Audience) => {
-                        teleporter
+                        ctx.teleporter
                           .teleport(
                             GlobalPlayer.OnThisServer(player),
                             home.locationWithoutWorld,
@@ -432,7 +432,7 @@ object HomeCommands:
           permissions = LibPerm.Export,
           description = _ => Some(t"Export home data")
         ) { case (sender, _) =>
-          homeHandler.exportStorageData().map { _ =>
+          ctx.homeHandler.exportStorageData().map { _ =>
             sender.sendMessage(t"${Green}Export successful")
             Right(())
           }
@@ -443,7 +443,7 @@ object HomeCommands:
           permissions = LibPerm.Import,
           description = _ => Some(t"Import home data")
         ) { case (sender, _) =>
-          homeHandler.importStorageData().map { _ =>
+          ctx.homeHandler.importStorageData().map { _ =>
             sender.sendMessage(t"${Green}Import successful")
             Right(())
           }
@@ -508,13 +508,13 @@ object HomeCommands:
     )
 
   def listHomes(sender: CommandSender, owner: OfflinePlayer, isOther: Boolean)(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       plugin: ScalaPlugin,
       ec: ExecutionContext
   ): FutureOrNow[Either[String, Unit]] =
-    homeHandler.allHomesForPlayer(owner.getUniqueId).map(_.keys.toSeq).map { homes =>
+    ctx.homeHandler.allHomesForPlayer(owner.getUniqueId).map(_.keys.toSeq).map { homes =>
       val world = locationSender.validate(sender).fold(_ => Bukkit.getWorlds.get(0), _.getWorld)
-      val limit = homeHandler.getHomeLimit(world, owner)
+      val limit = ctx.homeHandler.getHomeLimit(world, owner)
 
       if homes.isEmpty then
         if isOther
@@ -562,26 +562,26 @@ object HomeCommands:
   )
 
   def setHome(sender: Player, owner: OfflinePlayer, name: String, isOther: Boolean)(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       plugin: ScalaPlugin,
       ec: ExecutionContext
   ): FutureOrNow[Either[String, Unit]] =
     if disallowedHomeNames.exists(lowercase(name).startsWith)
     then FutureOrNow.now(Left("That home name is disallowed"))
     else
-      homeHandler.homeExist(owner.getUniqueId, name).zip(homeHandler.homeCount(owner.getUniqueId)).flatMap {
+      ctx.homeHandler.homeExist(owner.getUniqueId, name).zip(ctx.homeHandler.homeCount(owner.getUniqueId)).flatMap {
         (replace, homeCount) =>
           if
             // Scalafmt unindents this block
             // format:off
-            val limit            = homeHandler.getHomeLimit(sender.getWorld, owner)
+            val limit            = ctx.homeHandler.getHomeLimit(sender.getWorld, owner)
             val limitWithReplace = if replace then limit + 1 else limit
             val limitReached     = homeCount >= limitWithReplace
             limitReached
             // format:on
           then FutureOrNow.now(Left("Home limit reached"))
           else
-            homeHandler.makeHome(owner.getUniqueId, name, sender.getLocation).map { _ =>
+            ctx.homeHandler.makeHome(owner.getUniqueId, name, sender.getLocation).map { _ =>
               val homeNameText =
                 if isOther
                 then s""""$name" for ${owner.getName}"""
@@ -594,10 +594,10 @@ object HomeCommands:
   end setHome
 
   def tpHome(sender: Player, home: OtherHome)(
-      using plugin: HomePlugin,
-      teleporter: Teleporter
+      using ctx: HSHContext,
+      plugin: HomePlugin
   ): Either[String, Unit] =
-    teleporter
+    ctx.teleporter
       .teleport(
         GlobalPlayer.OnThisServer(sender),
         home.home.locationWithoutWorld,
@@ -611,16 +611,15 @@ object HomeCommands:
   def deleteHome(
       sender: CommandSender,
       home: OtherHome
-  )(using homeHandler: HomeHandler, plugin: ScalaPlugin, ec: ExecutionContext): FutureOrNow[Either[String, Unit]] =
-    homeHandler.deleteHome(home.homeOwner.getUniqueId, home.namedHome.name).map { _ =>
+  )(using ctx: HSHContext, plugin: ScalaPlugin, ec: ExecutionContext): FutureOrNow[Either[String, Unit]] =
+    ctx.homeHandler.deleteHome(home.homeOwner.getUniqueId, home.namedHome.name).map { _ =>
       sender.sendMessage(t"${Green}Deleted ${home.chatHomeName}")
       Right(())
     }
 
   def inviteToHome(sender: CommandSender, home: OtherHome, player: GlobalPlayer)(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       plugin: ScalaPlugin,
-      bungeeChannel: BungeeChannel,
       ec: ExecutionContext
   ): Either[String, Unit] =
     val playerSender = sender match
@@ -628,7 +627,7 @@ object HomeCommands:
       case _ if Bukkit.getOnlinePlayers.asScala.nonEmpty => Right(Bukkit.getOnlinePlayers.asScala.head)
       case _ => Left("Can't invite player on another server if there are not players present at the origin")
 
-    homeHandler.addInvite(player.uuid, home.homeOwner.getUniqueId, home.home).foreach { _ =>
+    ctx.homeHandler.addInvite(player.uuid, home.homeOwner.getUniqueId, home.home).foreach { _ =>
       val gotoButton =
         button(t"${Yellow}Go to ${home.chatHomeName}", s"/home goto ${home.homeOwner.getName} ${home.namedHome.name}")
 
@@ -636,7 +635,7 @@ object HomeCommands:
         player.sendMessage(
           p,
           t"${t"${Yellow}You have been invited to ${home.chatHomeName} by ${sender.getName}${Component.newline()}"}$gotoButton"
-        )
+        )(using ctx.bungeeChannel)
       }
     }
 
@@ -645,14 +644,14 @@ object HomeCommands:
     }
 
   def listHomeResidents(sender: CommandSender, home: OtherHome)(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       ec: ExecutionContext
   ): FutureOrNow[Either[String, Unit]] =
-    homeHandler.getHomeResidents(home.homeOwner.getUniqueId, home.name).map(_.toSeq).map { residents =>
+    ctx.homeHandler.getHomeResidents(home.homeOwner.getUniqueId, home.name).map(_.toSeq).map { residents =>
       val homeName    = home.namedHome.name.replace("""\""", """\\""")
       val otherPrefix = if (home.isOther) s"/home other ${home.homeOwner.getName} $homeName" else s"/home $homeName"
       val world       = locationSender.validate(sender).fold(_ => Bukkit.getWorlds.get(0), _.getWorld)
-      val limit       = homeHandler.getResidentLimit(world, home.homeOwner)
+      val limit       = ctx.homeHandler.getResidentLimit(world, home.homeOwner)
 
       val builder = Bukkit.getServicesManager.load(classOf[PaginationService])
 
@@ -686,20 +685,20 @@ object HomeCommands:
   end listHomeResidents
 
   def addResident(sender: CommandSender, home: OtherHome, player: OfflinePlayer)(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       plugin: ScalaPlugin,
       ec: ExecutionContext
   ): FutureOrNow[Either[String, Unit]] =
-    homeHandler.getHomeResidents(home.homeOwner.getUniqueId, home.name).flatMap { residents =>
+    ctx.homeHandler.getHomeResidents(home.homeOwner.getUniqueId, home.name).flatMap { residents =>
       val world           = locationSender.validate(sender).fold(_ => Bukkit.getWorlds.get(0), _.getWorld)
-      val limitReached    = residents.size >= homeHandler.getResidentLimit(world, home.homeOwner)
+      val limitReached    = residents.size >= ctx.homeHandler.getResidentLimit(world, home.homeOwner)
       val alreadyResident = residents.contains(player.getUniqueId)
 
       if limitReached then FutureOrNow.now(Left("Resident limit reached"))
       else if alreadyResident then
         FutureOrNow.now(Left(s"${player.getName} is already a resident of ${home.chatHomeName}"))
       else
-        homeHandler.addResident(home.homeOwner.getUniqueId, home.name, player.getUniqueId).map { _ =>
+        ctx.homeHandler.addResident(home.homeOwner.getUniqueId, home.name, player.getUniqueId).map { _ =>
           sender.sendMessage(t"${Green}Adding ${player.getName} as a resident to ${home.chatHomeName}")
           Right(())
         }
@@ -707,15 +706,15 @@ object HomeCommands:
   end addResident
 
   def removeResident(sender: CommandSender, home: OtherHome, player: OfflinePlayer)(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       plugin: ScalaPlugin,
       ec: ExecutionContext
   ): FutureOrNow[Either[String, Unit]] =
-    homeHandler.getHomeResidents(home.homeOwner.getUniqueId, home.name).flatMap { residents =>
+    ctx.homeHandler.getHomeResidents(home.homeOwner.getUniqueId, home.name).flatMap { residents =>
       if !residents.contains(player.getUniqueId)
       then FutureOrNow.now(Left(s"""${player.getName} is not a resident of ${home.chatHomeName}"""))
       else
-        homeHandler.removeResident(home.homeOwner.getUniqueId, home.name, player.getUniqueId).map { _ =>
+        ctx.homeHandler.removeResident(home.homeOwner.getUniqueId, home.name, player.getUniqueId).map { _ =>
           sender.sendMessage(t"${Green}Removed ${player.getName} as a resident from ${home.chatHomeName}")
           Right(())
         }
@@ -723,16 +722,16 @@ object HomeCommands:
   end removeResident
 
   def listResidents(sender: CommandSender, owner: OfflinePlayer, isOther: Boolean)(
-      using homeHandler: HomeHandler,
+      using ctx: HSHContext,
       ec: ExecutionContext
   ): FutureOrNow[Either[String, Unit]] =
     val otherPrefix = if isOther then s"/home other ${owner.getName}" else "/home"
     val world       = locationSender.validate(sender).fold(_ => Bukkit.getWorlds.get(0), _.getWorld)
-    val limit       = homeHandler.getResidentLimit(world, owner)
+    val limit       = ctx.homeHandler.getResidentLimit(world, owner)
 
     val builder = Bukkit.getServicesManager.load(classOf[PaginationService])
 
-    homeHandler.allResidentsForPlayer(owner.getUniqueId).map { residents =>
+    ctx.homeHandler.allResidentsForPlayer(owner.getUniqueId).map { residents =>
       val title = t"""$Yellow${owner.getName}'s residents"""
 
       val residentText =
